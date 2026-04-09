@@ -69,6 +69,9 @@ class TimelinePlotter:
             ),
         ))
 
+        t_min = float(df[time_column].min())
+        t_max = float(df[time_column].max())
+
         fig.update_layout(
             plot_bgcolor=COLORS["background"],
             paper_bgcolor=COLORS["background"],
@@ -79,6 +82,9 @@ class TimelinePlotter:
                 gridcolor=COLORS["grid"],
                 color="#FAFAFA",
                 zeroline=False,
+                range=[t_min, t_max],
+                minallowed=t_min,
+                maxallowed=t_max,
             ),
             yaxis=dict(
                 title=y_column,
@@ -126,7 +132,12 @@ class TimelinePlotter:
         return fig
 
     def add_phase_bands(self, fig: go.Figure, df: pd.DataFrame) -> go.Figure:
-        """Destaca fases de solo (WOW == 0) com banda marrom translúcida."""
+        """Destaca fases de voo (azul) e solo (marrom) com base no sinal WOW.
+
+        Lógica do sensor WOW (Weight on Wheels):
+            WOW == 1  →  peso nas rodas  →  SOLO   (marrom)
+            WOW == 0  →  sem peso        →  VOO    (azul)
+        """
         if "WOW" not in df.columns or "TIME" not in df.columns:
             return fig
 
@@ -134,34 +145,55 @@ class TimelinePlotter:
         if wow_data.empty:
             return fig
 
-        in_ground = False
+        _PHASE_STYLE = {
+            "ground": dict(
+                fillcolor="rgba(107, 66, 38, 0.22)",
+                label="Solo",
+                label_color="#A07850",
+            ),
+            "flight": dict(
+                fillcolor="rgba(74, 144, 217, 0.15)",
+                label="Voo",
+                label_color="#4A90D9",
+            ),
+        }
+
+        current_phase: str | None = None
         band_start: float | None = None
+        t_max = float(wow_data["TIME"].max())
 
-        for _, row in wow_data.iterrows():
-            on_ground = int(row["WOW"]) == 0
-            t = float(row["TIME"])
-
-            if on_ground and not in_ground:
-                in_ground = True
-                band_start = t
-            elif not on_ground and in_ground:
-                in_ground = False
-                if band_start is not None:
-                    fig.add_vrect(
-                        x0=band_start, x1=t,
-                        fillcolor="rgba(107, 66, 38, 0.20)",
-                        line_width=0,
-                        annotation_text="Solo",
-                        annotation_font=dict(color="#A07850", size=10),
-                        annotation_position="top left",
-                    )
-
-        if in_ground and band_start is not None:
-            fig.add_vrect(
-                x0=band_start, x1=float(wow_data["TIME"].max()),
-                fillcolor="rgba(107, 66, 38, 0.20)",
+        def _close_band(phase: str, t_end: float, annotate: bool) -> None:
+            if band_start is None:
+                return
+            style = _PHASE_STYLE[phase]
+            kwargs: dict = dict(
+                x0=band_start, x1=t_end,
+                fillcolor=style["fillcolor"],
                 line_width=0,
             )
+            if annotate:
+                kwargs.update(
+                    annotation_text=style["label"],
+                    annotation_font=dict(color=style["label_color"], size=10),
+                    annotation_position="top left",
+                )
+            fig.add_vrect(**kwargs)
+
+        first_annotated: set[str] = set()
+
+        for _, row in wow_data.iterrows():
+            phase = "ground" if int(row["WOW"]) == 1 else "flight"
+            t = float(row["TIME"])
+
+            if phase != current_phase:
+                if current_phase is not None:
+                    _close_band(current_phase, t, annotate=current_phase not in first_annotated)
+                    first_annotated.add(current_phase)
+                current_phase = phase
+                band_start = t
+
+        if current_phase is not None:
+            _close_band(current_phase, t_max, annotate=current_phase not in first_annotated)
 
         return fig
 
@@ -376,20 +408,136 @@ class AttitudeIndicator:
 
 
 # -----------------------------------------------------------------------
-# Módulo do Grupo Motopropulsor — Gauges (Fase 2 — skeleton)
+# Módulo do Grupo Motopropulsor — Gauges (Fase 2)
 # -----------------------------------------------------------------------
 
-class EngineGaugePlotter:
-    """Gera os gauges/bullets dos instrumentos do motor via go.Indicator."""
+# Especificação de faixa e unidade de cada instrumento do motor
+GAUGE_SPECS: dict[str, dict] = {
+    "Q":   {"min": 0,   "max": 130,  "unit": "%",    "label": "TORQUE"},
+    "ITT": {"min": 0,   "max": 1100, "unit": "°C",   "label": "ITT"},
+    "NP":  {"min": 0,   "max": 120,  "unit": "%",    "label": "Np"},
+    "NG":  {"min": 0,   "max": 115,  "unit": "%",    "label": "Ng"},
+    "FF":  {"min": 0,   "max": 500,  "unit": "kg/h", "label": "F.FLOW"},
+    "OT":  {"min": 0,   "max": 150,  "unit": "°C",   "label": "OIL TEMP"},
+    "OP":  {"min": 0,   "max": 200,  "unit": "PSI",  "label": "OIL PRESS"},
+}
 
-    def plot_gauge(self, value: float, variable: str, label: str) -> go.Figure:
-        """Cria um gauge Plotly para a variável de motor fornecida. (Fase 2)"""
-        ...
+# Variáveis cujo limite é mínimo (abaixo = problema), ao contrário das demais
+_MIN_LIMIT_VARS: frozenset[str] = frozenset({"OP"})
+
+
+class EngineGaugePlotter:
+    """Gera os gauges dos instrumentos do motor via go.Indicator."""
 
     def _get_color(self, value: float, variable: str) -> str:
-        """Retorna a cor correta (normal / caution / warning) para o valor. (Fase 2)"""
-        ...
+        """Retorna a cor (normal / caution / warning) para o valor instantâneo."""
+        limits = ENGINE_LIMITS.get(variable)
+        if limits is None:
+            return COLORS["normal"]
+
+        caution = limits["caution"]
+        warning = limits["warning"]
+
+        if variable in _MIN_LIMIT_VARS:
+            # OP: abaixo do limite é ruim
+            if value <= warning:
+                return COLORS["warning"]
+            if value <= caution:
+                return COLORS["caution"]
+        else:
+            if value >= warning:
+                return COLORS["warning"]
+            if value >= caution:
+                return COLORS["caution"]
+
+        return COLORS["normal"]
+
+    def plot_gauge(self, value: float, variable: str, label: str) -> go.Figure:
+        """Cria um gauge Plotly para a variável de motor fornecida.
+
+        A cor do needle e do número muda dinamicamente conforme ENGINE_LIMITS.
+        """
+        spec = GAUGE_SPECS.get(variable, {"min": 0, "max": 100, "unit": "", "label": label})
+        limits = ENGINE_LIMITS.get(variable, {})
+
+        v_min = spec["min"]
+        v_max = spec["max"]
+        safe_value = value if (value == value and value is not None) else 0.0
+        bar_color = self._get_color(safe_value, variable)
+
+        caution_val = limits.get("caution", v_max * 0.80)
+        warning_val = limits.get("warning", v_max * 0.95)
+
+        # Zonas de fundo do arco: verde=normal, amarelo=caution, vermelho=warning
+        if variable in _MIN_LIMIT_VARS:
+            steps = [
+                dict(range=[v_min,      warning_val], color="#2A1515"),  # danger
+                dict(range=[warning_val, caution_val], color="#2A2210"),  # caution
+                dict(range=[caution_val, v_max],       color="#152A15"),  # normal
+            ]
+            threshold_value = caution_val
+        else:
+            steps = [
+                dict(range=[v_min,      caution_val],  color="#152A15"),  # normal
+                dict(range=[caution_val, warning_val], color="#2A2210"),  # caution
+                dict(range=[warning_val, v_max],        color="#2A1515"),  # danger
+            ]
+            threshold_value = warning_val
+
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=safe_value,
+            title=dict(
+                text=label,
+                font=dict(color="#AAAAAA", size=9, family="monospace"),
+            ),
+            number=dict(
+                font=dict(color=bar_color, size=13, family="monospace"),
+                suffix=f" {spec['unit']}",
+            ),
+            gauge=dict(
+                axis=dict(
+                    range=[v_min, v_max],
+                    tickcolor="#444444",
+                    tickfont=dict(color="#444444", size=7),
+                    nticks=5,
+                ),
+                bar=dict(color=bar_color, thickness=0.28),
+                bgcolor="#111111",
+                borderwidth=1,
+                bordercolor="#2D2D2D",
+                steps=steps,
+                threshold=dict(
+                    line=dict(color="#FF4B4B", width=2),
+                    thickness=0.80,
+                    value=threshold_value,
+                ),
+            ),
+        ))
+
+        fig.update_layout(
+            paper_bgcolor=COLORS["background"],
+            plot_bgcolor=COLORS["background"],
+            margin=dict(l=8, r=8, t=28, b=5),
+            height=160,
+        )
+
+        return fig
 
     def plot_all_engine_gauges(self, snapshot: pd.Series) -> list[go.Figure]:
-        """Gera a lista completa de gauges para o snapshot temporal atual. (Fase 2)"""
-        ...
+        """Gera a lista completa de 7 gauges para o snapshot temporal atual.
+
+        Ordem: Q, ITT, NP, NG, FF, OT, OP
+        """
+        order = [("Q", "TORQUE"), ("ITT", "ITT"), ("NP", "Np"), ("NG", "Ng"),
+                 ("FF", "F.FLOW"), ("OT", "OIL TEMP"), ("OP", "OIL PRESS")]
+
+        def _safe(key: str) -> float:
+            val = snapshot.get(key, 0)
+            try:
+                f = float(val)
+                return f if f == f else 0.0
+            except Exception:
+                return 0.0
+
+        return [self.plot_gauge(_safe(var), var, lbl) for var, lbl in order]

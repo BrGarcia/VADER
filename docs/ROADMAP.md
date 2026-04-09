@@ -1,6 +1,6 @@
 # ROADMAP — V.A.D.E.R.
 **Visualizador Analítico de Dados de Engenharia e Rastreio**
-Versão: 1.1 | Atualizado: 09 de Abril de 2026
+Versão: 1.2 | Atualizado: 09 de Abril de 2026
 
 ---
 
@@ -10,7 +10,7 @@ Versão: 1.1 | Atualizado: 09 de Abril de 2026
 |------|------|------------|-------------|
 | **0** | Infraestrutura e Scaffolding | Crítica | — | ✅ Concluída |
 | **1** | MVP — Núcleo de Dinâmica de Voo | Crítica | Fase 0 | ✅ Concluída |
-| **2** | Módulo do Grupo Motopropulsor | Alta | Fase 1 | 🔲 Pendente |
+| **2** | Módulo do Grupo Motopropulsor | Alta | Fase 1 | ✅ Concluída |
 | **3** | Módulo de Diagnóstico e Falhas (EICAS) | Alta | Fase 1 | 🔲 Pendente |
 | **4** | Polimento, Performance e Handoff | Média | Fases 2 e 3 | 🔲 Pendente |
 
@@ -80,34 +80,37 @@ Versão: 1.1 | Atualizado: 09 de Abril de 2026
 
 ---
 
-## FASE 2 — Módulo do Grupo Motopropulsor
+## FASE 2 — Módulo do Grupo Motopropulsor ✅
 
 **Objetivo:** Adicionar cards e gauges de performance do motor para correlação entre comandos da manete e resposta da turbina.
-
+**Status:** Concluída em 09/04/2026
 **Referência:** SCS §RF04 | Dicionário de Dados — Fase 2 | Guia UI EICAS §2
 
 ### Entregas
 
 #### 2.1 — `EngineGaugePlotter` (src/plots.py)
-- [ ] Implementar `_get_color()`: lógica de cores com base em `ENGINE_LIMITS` (normal / caution / warning)
-- [ ] Implementar `plot_gauge()`: `go.Indicator` no modo `gauge` com thresholds dinâmicos de cor
-- [ ] Implementar `plot_all_engine_gauges()`: retornar lista de 7 figuras para `Q`, `ITT`, `NP`, `NG`, `FF`, `OT`, `OP`
-
-**Limites de Cores:**
-- Normal: `#FFFFFF` | Caution: `#FFC107` | Warning: `#FF4B4B`
-- ITT Warning obrigatório acima do limite operacional (ver `ENGINE_LIMITS`)
+- [x] `_get_color()`: lógica normal/caution/warning; OP com lógica de limite mínimo invertida
+- [x] `plot_gauge()`: `go.Indicator` modo gauge com zonas de fundo coloridas, needle dinâmico e threshold line
+- [x] `plot_all_engine_gauges()`: 7 figuras geradas — Q, ITT, NP, NG, FF, OT, OP (validado)
+- [x] `GAUGE_SPECS`: faixas operacionais e unidades centralizadas por variável
+- [x] `_MIN_LIMIT_VARS`: tratamento especial para OP (alerta abaixo do limite)
 
 #### 2.2 — `EICASPanel.render_engine_gauges()` (src/ui_components.py)
-- [ ] Implementar renderização dos 7 gauges em colunas `st.columns(7)`
-- [ ] Fundo obrigatoriamente dark (`#0E1117`) — usar `st.markdown` com CSS inline
+- [x] 7 gauges renderizados em `st.columns(7)` com fundo dark `#0E1117`
+- [x] `EICASPanel.render()` implementado como orquestrador (chama gauges; CAS preparado para Fase 3)
 
 #### 2.3 — `SubsystemCards` (src/ui_components.py)
-- [ ] Implementar `render_engine_summary_card()`: ITT + FF + status resumido
-- [ ] Implementar `render_landing_gear_card()`: respeitar lógica invertida `LDG` (0=Abaixado, 1=Recolhido)
-- [ ] Implementar `render_structural_load_card()`: alerta visual se `NZ > 4.0G`
-- [ ] Implementar `render_all()`: orquestrar os três cards em `st.columns`
+- [x] `render_engine_summary_card()`: ITT + FF + Ng com cores dinâmicas
+- [x] `render_landing_gear_card()`: lógica invertida LDG (0=Abaixado/verde, 1=Recolhido/amarelo) + WOW corrigido
+- [x] `render_structural_load_card()`: alerta visual (borda + texto vermelhos) se `NZ > 4.0G`
+- [x] `_render_pcl_card()`: card bônus com posição da Manete (PCL) e zona operacional
+- [x] `render_all()`: 4 cards em `st.columns(4)`
 
-**Critério de Aceite da Fase 2:**
+#### Integração em `app.py`
+- [x] Box Inferior substituído por `EICASPanel.render()` + `SubsystemCards.render_all()`
+- [x] Bug WOW label corrigido (`SOLO` quando `WOW == 1`)
+
+**Critério de Aceite da Fase 2:** ✅
 > Ao arrastar o slider de tempo, os gauges do motor e os cards de subsistemas atualizam instantaneamente para os valores daquele segundo.
 
 ---

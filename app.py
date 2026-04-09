@@ -12,7 +12,7 @@ import pandas as pd
 
 from src.data_loader import DataLoader
 from src.plots import TimelinePlotter
-from src.ui_components import AttitudeBox, TimeController
+from src.ui_components import AttitudeBox, TimeController, EICASPanel, SubsystemCards
 
 # -----------------------------------------------------------------------
 # Configuração da Página
@@ -106,14 +106,15 @@ def render_sidebar() -> tuple[pd.DataFrame | None, str | None]:
 def render_main(df: pd.DataFrame, y_col: str) -> None:
     """Monta o layout de três boxes sincronizados via TimeController."""
 
-    controller = TimeController(df)
-    attitude_box = AttitudeBox()
+    controller    = TimeController(df)
+    attitude_box  = AttitudeBox()
+    eicas_panel   = EICASPanel()
+    subsys_cards  = SubsystemCards()
+    fault_columns = _LOADER.get_fault_columns(df)
 
-    # ── Slider de Tempo (topo) ──────────────────────────────────────────
-    time_idx = controller.render_slider()
+    # Lê o índice atual do session_state sem renderizar o slider ainda
+    time_idx = int(st.session_state.get(TimeController.SESSION_KEY, 0))
     snapshot = controller.get_snapshot(time_idx)
-
-    st.markdown("---")
 
     # ── Box Superior: Horizonte Artificial + Métricas ───────────────────
     with st.container():
@@ -144,76 +145,17 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
             config={"scrollZoom": True, "displayModeBar": True},
         )
 
-    # ── Box Inferior: Subsistemas (placeholder Fase 2) ──────────────────
+    # ── Slider de Tempo (abaixo do gráfico) ─────────────────────────────
+    time_idx = controller.render_slider()
+
+    # ── Box Inferior: Gauges do Motor (EICAS) ───────────────────────────
     st.markdown("---")
-    st.markdown("#### 🔧 Subsistemas *(Fase 2)*")
-    cols = st.columns(4)
+    st.markdown("#### 🛠️ Grupo Motopropulsor")
+    eicas_panel.render(snapshot, fault_columns)
 
-    def _safe(key: str, fallback: float = 0.0) -> float:
-        val = snapshot.get(key, fallback)
-        try:
-            f = float(val)
-            return f if f == f else fallback
-        except Exception:
-            return fallback
-
-    ldg = int(_safe("LDG"))
-    wow = int(_safe("WOW"))
-    nz  = _safe("NZ")
-    itt = _safe("ITT")
-    ff  = _safe("FF")
-
-    # Card: Trem de Pouso
-    with cols[0]:
-        gear_label = "ABAIXADO ✓" if ldg == 0 else "RECOLHIDO"
-        gear_color = "#00FF88" if ldg == 0 else "#FFC107"
-        phase_label = "SOLO" if wow == 0 else "AR"
-        st.markdown(
-            f"""<div style="background:#0E1117;border:1px solid #2D2D2D;border-radius:8px;
-                padding:12px;text-align:center;font-family:monospace;">
-                <div style="font-size:0.65rem;color:#888;letter-spacing:1px;">TREM DE POUSO</div>
-                <div style="font-size:1.2rem;font-weight:bold;color:{gear_color};">{gear_label}</div>
-                <div style="font-size:0.75rem;color:#888;margin-top:4px;">{phase_label}</div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-
-    # Card: Força G
-    with cols[1]:
-        nz_color = "#FF4B4B" if abs(nz) > 4.0 else "#00FF88"
-        nz_alert = " ⚠ LIMITE!" if abs(nz) > 4.0 else ""
-        st.markdown(
-            f"""<div style="background:#0E1117;border:1px solid #2D2D2D;border-radius:8px;
-                padding:12px;text-align:center;font-family:monospace;">
-                <div style="font-size:0.65rem;color:#888;letter-spacing:1px;">CARGA ESTRUTURAL</div>
-                <div style="font-size:1.6rem;font-weight:bold;color:{nz_color};">{nz:+.2f} G{nz_alert}</div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-
-    # Card: Motor (ITT)
-    with cols[2]:
-        itt_color = "#FF4B4B" if itt > 1000 else "#FFC107" if itt > 850 else "#00FF88"
-        st.markdown(
-            f"""<div style="background:#0E1117;border:1px solid #2D2D2D;border-radius:8px;
-                padding:12px;text-align:center;font-family:monospace;">
-                <div style="font-size:0.65rem;color:#888;letter-spacing:1px;">ITT</div>
-                <div style="font-size:1.6rem;font-weight:bold;color:{itt_color};">{itt:.0f} °C</div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-
-    # Card: Fluxo de Combustível
-    with cols[3]:
-        ff_color = "#FF4B4B" if ff > 480 else "#FFC107" if ff > 420 else "#00FF88"
-        st.markdown(
-            f"""<div style="background:#0E1117;border:1px solid #2D2D2D;border-radius:8px;
-                padding:12px;text-align:center;font-family:monospace;">
-                <div style="font-size:0.65rem;color:#888;letter-spacing:1px;">COMBUSTÍVEL</div>
-                <div style="font-size:1.6rem;font-weight:bold;color:{ff_color};">{ff:.0f} kg/h</div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
+    # ── Cards de Subsistemas ─────────────────────────────────────────────
+    st.markdown("#### 🔧 Subsistemas")
+    subsys_cards.render_all(snapshot)
 
 
 # -----------------------------------------------------------------------
