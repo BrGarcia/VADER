@@ -23,3 +23,34 @@ Para rodar o V.A.D.E.R. na sua máquina local, siga os passos abaixo. Recomenda-
 ```bash
 git clone https://seu-repositorio-git/vader.git
 cd vader
+```
+
+### 2. Crie e ative um ambiente virtual
+```bash
+python -m venv venv
+source venv/bin/activate  # No Windows: venv\Scripts\activate
+```
+
+### 3. Instale as dependências
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Execute a aplicação
+```bash
+streamlit run app.py
+```
+
+---
+
+## 📂 Estrutura do Projeto
+- `assets/`: Imagens e recursos visuais da aeronave A-29.
+- `docs/`: Documentação detalhada, guias de UI e manuais técnicos.
+- `app.py`: Ponto de entrada da aplicação Streamlit (em desenvolvimento).
+- `requirements.txt`: Lista de dependências do projeto.
+
+---
+
+## 📸 Visualização
+![A-29 Side View](assets/a29_sideview.png)
+*Diagrama de referência da aeronave A-29.*
