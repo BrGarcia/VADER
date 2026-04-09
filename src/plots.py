@@ -102,31 +102,63 @@ class TimelinePlotter:
         return fig
 
     def add_fault_markers(
-        self, fig: go.Figure, df: pd.DataFrame, fault_columns: list[str]
+        self,
+        fig: go.Figure,
+        df: pd.DataFrame,
+        fault_columns: list[str],
+        y_column: str = "BALT",
     ) -> go.Figure:
-        """Sobrepõe marcadores no gráfico nos instantes em que uma falha MW* == 1."""
+        """Sobrepõe marcadores no gráfico nos instantes em que uma falha MW* == 1.
+
+        Os marcadores são plotados no valor real da série temporal selecionada
+        (y_column) para que fiquem visíveis sobre a curva.
+
+        Args:
+            fig: Figura gerada por `plot()`.
+            df: DataFrame com colunas MW*.
+            fault_columns: Colunas a varrer (prefixo MW1_/MW2_/MW3_).
+            y_column: Coluna cujos valores são usados como coordenada Y dos marcadores.
+        """
         if "TIME" not in df.columns or not fault_columns:
             return fig
+
+        y_col = y_column if y_column in df.columns else None
 
         for col in fault_columns:
             if col not in df.columns:
                 continue
-            fault_times = df.loc[df[col] == 1, "TIME"]
-            if fault_times.empty:
+
+            fault_mask = df[col] == 1
+            if not fault_mask.any():
                 continue
 
+            fault_rows = df.loc[fault_mask]
+            x_vals = fault_rows["TIME"]
+            y_vals = fault_rows[y_col] if y_col else pd.Series(
+                [0.0] * len(fault_rows), index=fault_rows.index
+            )
+
+            # Rótulo limpo: remove prefixo MW*_
+            short_name = col.split("_", 1)[-1] if "_" in col else col
+
             fig.add_trace(go.Scatter(
-                x=fault_times,
-                y=[df[df["TIME"] == t].iloc[0].get("BALT", 0) for t in fault_times],
+                x=x_vals,
+                y=y_vals,
                 mode="markers",
                 name=col,
+                legendgroup="faults",
+                legendgrouptitle=dict(text="Falhas") if col == fault_columns[0] else None,
                 marker=dict(
-                    symbol="x",
+                    symbol="x-open",
                     color=COLORS["warning"],
-                    size=8,
+                    size=10,
                     line=dict(width=2),
                 ),
-                hovertemplate=f"<b>FALHA: {col}</b><br>t=%{{x:.3f}}s<extra></extra>",
+                hovertemplate=(
+                    f"<b>⚠ FALHA: {short_name}</b><br>"
+                    f"t=%{{x:.3f}} s<br>"
+                    f"{y_column}=%{{y}}<extra></extra>"
+                ),
             ))
 
         return fig

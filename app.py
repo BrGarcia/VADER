@@ -129,6 +129,7 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
 
         fig = _PLOTTER.plot(df, y_col)
         fig = _PLOTTER.add_phase_bands(fig, df)
+        fig = _PLOTTER.add_fault_markers(fig, df, fault_columns, y_column=y_col)
 
         if "TIME" in df.columns:
             t_cursor = float(df.iloc[time_idx]["TIME"])

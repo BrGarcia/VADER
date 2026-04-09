@@ -2,12 +2,9 @@
 ui_components.py
 Componentes visuais Streamlit do V.A.D.E.R.
 
-Fase 1 (implementado):
-  - TimeController  — slider de tempo + session_state
-  - AttitudeBox     — horizonte artificial + métricas críticas
-
-Fase 2/3 (skeleton):
-  - EICASPanel, SubsystemCards
+Fase 1: TimeController, AttitudeBox
+Fase 2: EICASPanel (gauges), SubsystemCards
+Fase 3: EICASPanel (CAS window), fault markers
 """
 
 from __future__ import annotations
@@ -20,16 +17,74 @@ from src.plots import EngineGaugePlotter, AttitudeIndicator, TimelinePlotter
 
 
 # -----------------------------------------------------------------------
-# Dicionário de tradução MWC_DATA → texto EICAS  (Fase 3)
+# Dicionário de tradução MWC_DATA → (texto EICAS, severidade)
 # -----------------------------------------------------------------------
 
 MWC_TRANSLATION: dict[int, tuple[str, str]] = {
     0:  ("", "normal"),
     1:  ("ENG MAN - PMU FAIL", "warning"),
-    5:  ("OIL PRESS", "caution"),
-    27: ("ELEK OVH", "caution"),
-    47: ("ENG FIRE", "warning"),
-    57: ("ENG LIMIT", "warning"),
+    5:  ("OIL PRESS",          "caution"),
+    27: ("ELEK OVH",           "caution"),
+    47: ("ENG FIRE",           "warning"),
+    57: ("ENG LIMIT",          "warning"),
+}
+
+# -----------------------------------------------------------------------
+# Descrições humanas das colunas de falha MW* (Fase 3)
+# -----------------------------------------------------------------------
+
+FAULT_DESCRIPTIONS: dict[str, tuple[str, str]] = {
+    # MW1 — sensores de medição
+    "MW1_FPS1":    ("FAIL PS1 SENSOR",        "caution"),
+    "MW1_FPS1ADC": ("FAIL PS1 ADC",           "caution"),
+    "MW1_FMNADC":  ("FAIL MN ADC",            "caution"),
+    "MW1_FTPS1":   ("FAIL T PS1 SENSOR",      "caution"),
+    "MW1_FT1":     ("FAIL T1 SENSOR",         "caution"),
+    "MW1_FT5":     ("FAIL T5 SENSOR",         "caution"),
+    "MW1_FTOTTQ":  ("FAIL TOT/TQ SENSOR",     "caution"),
+    "MW1_FNG":     ("FAIL Ng SENSOR",         "caution"),
+    "MW1_FNP":     ("FAIL Np SENSOR",         "caution"),
+    "MW1_FQ":      ("FAIL TORQUE SENSOR",     "caution"),
+    "MW1_SUBIDLE": ("SUB-IDLE DETECT",        "caution"),
+    "MW1_FLUART1": ("FAIL UART1",             "caution"),
+    "MW1_FLUART2": ("FAIL UART2",             "caution"),
+    "MW1_FLARINC": ("FAIL ARINC LINK",        "caution"),
+    "MW1_FOATADC": ("FAIL OAT ADC",           "caution"),
+    "MW1_FRT5BT":  ("FAIL RT5 BATT",         "caution"),
+    # MW2 — atuadores e discretos
+    "MW2_FWF":     ("FAIL FUEL FLOW",         "caution"),
+    "MW2_FPCL":    ("FAIL PCL SENSOR",        "caution"),
+    "MW2_FAPCL":   ("FAIL ANALOG PCL",        "caution"),
+    "MW2_FDCDIS":  ("FAIL DC DISCRETE",       "caution"),
+    "MW2_FSTRTDIS":("FAIL START DISCRETE",    "caution"),
+    "MW2_FRIGDIS": ("FAIL IGN DISCRETE",      "caution"),
+    "MW2_FWOW":    ("FAIL WOW DISCRETE",      "caution"),
+    "MW2_FPMADIS": ("FAIL PMA DISCRETE",      "caution"),
+    "MW2_NOSMM":   ("NO SMM COMM",            "caution"),
+    "MW2_FRCPLA":  ("FAIL RCPLA",             "caution"),
+    "MW2_FCREEP":  ("CREEP DETECTED",         "caution"),
+    "MW2_FDCU":    ("FAIL DCU COMM",          "caution"),
+    "MW2_FRQGT":   ("FAIL RQ GROUND TEST",    "caution"),
+    "MW2_FRQBT":   ("FAIL RQ BENCH TEST",     "caution"),
+    "MW2_FLOWVOLT":("LOW VOLTAGE",            "warning"),
+    "MW2_RORIGGNG":("RIG Ng OUT OF RANGE",    "caution"),
+    # MW3 — loops e hardware PMU
+    "MW3_FWFLOOP": ("FAIL WF LOOP",           "caution"),
+    "MW3_FBALOOP": ("FAIL BA LOOP",           "caution"),
+    "MW3_FPIUTM":  ("FAIL PIU TM",            "caution"),
+    "MW3_FFMUSM":  ("FAIL FMU SM",            "caution"),
+    "MW3_FPMUFDIS":("FAIL PMU F DISCRETE",    "caution"),
+    "MW3_FPMUWDIS":("FAIL PMU W DISCRETE",    "caution"),
+    "MW3_FIGNDIS": ("FAIL IGN DISCRETE",      "caution"),
+    "MW3_FNPCSA":  ("FAIL Np CSA",            "caution"),
+    "MW3_FNPRDIS": ("FAIL Np R DISCRETE",     "caution"),
+    "MW3_FQBUGDIS":("FAIL Q BUG DISCRETE",    "caution"),
+    "MW3_FTMWA":   ("FAIL TMW A",             "caution"),
+    "MW3_FPMUHW":  ("FAIL PMU HARDWARE",      "warning"),
+    "MW3_FAILEEWR":("FAIL EEPROM WRITE",      "caution"),
+    "MW3_FTTCOAT": ("FAIL TTC OAT",           "caution"),
+    "MW3_FTTCPS1": ("FAIL TTC PS1",           "caution"),
+    "MW3_FSHUTDIS":("FAIL SHUTDOWN SOL",      "warning"),
 }
 
 
@@ -181,8 +236,22 @@ class EICASPanel:
 
     def render(self, snapshot: pd.Series, fault_columns: list[str]) -> None:
         """Ponto de entrada principal do painel EICAS para o snapshot atual."""
+        # Gauges (linha completa)
         self.render_engine_gauges(snapshot)
-        # Fase 3: self.render_cas_window(...)
+
+        # CAS (Crew Alerting System)
+        mwc_raw = snapshot.get("MWC_DATA", 0)
+        try:
+            mwc_code = int(float(mwc_raw)) if mwc_raw == mwc_raw else 0
+        except Exception:
+            mwc_code = 0
+
+        mw_flags = {
+            col: int(float(snapshot.get(col, 0)) or 0)
+            for col in fault_columns
+            if col in snapshot.index
+        }
+        self.render_cas_window(mwc_code, mw_flags)
 
     def render_engine_gauges(self, snapshot: pd.Series) -> None:
         """Renderiza os 7 gauges do motor (Q, ITT, NP, NG, FF, OT, OP) em colunas."""
@@ -205,16 +274,102 @@ class EICASPanel:
         st.markdown("</div>", unsafe_allow_html=True)
 
     def render_cas_window(self, mwc_code: int, mw_flags: dict[str, int]) -> None:
-        """Renderiza a janela CAS com warnings acima de cautions. (Fase 3)"""
-        ...
+        """Renderiza a janela CAS.
+
+        - Sem alertas → painel preto com "VOO NORMAL" em cinza.
+        - WARNINGS (vermelho) sempre acima dos CAUTIONS (amarelo).
+        - Cada falha MW* ativa gera uma linha de CAUTION (ou WARNING se mapeado).
+        """
+        warnings: list[str] = []
+        cautions: list[str] = []
+
+        # 1. MWC_DATA → mensagem principal
+        mwc_text, mwc_sev = self._translate_mwc_code(mwc_code)
+        if mwc_text:
+            (warnings if mwc_sev == "warning" else cautions).append(mwc_text)
+
+        # 2. Flags MW* discretas
+        for col, val in mw_flags.items():
+            if val != 1:
+                continue
+            desc, sev = FAULT_DESCRIPTIONS.get(
+                col,
+                (col.split("_", 1)[-1].replace("_", " "), "caution"),
+            )
+            (warnings if sev == "warning" else cautions).append(desc)
+
+        # 3. Renderiza painel
+        if not warnings and not cautions:
+            body = (
+                "<div style='color:#2A2A2A; font-size:0.75rem; "
+                "text-align:center; padding:6px 0; letter-spacing:2px;'>"
+                "— VOO NORMAL —</div>"
+            )
+        else:
+            rows = ""
+            for msg in warnings:
+                rows += (
+                    f"<div style='color:#FF4B4B; font-weight:bold; "
+                    f"font-size:0.85rem; padding:2px 6px; "
+                    f"border-left:3px solid #FF4B4B; margin-bottom:2px;'>"
+                    f"▶ {msg}</div>"
+                )
+            for msg in cautions:
+                rows += (
+                    f"<div style='color:#FFC107; font-size:0.82rem; "
+                    f"padding:2px 6px; "
+                    f"border-left:3px solid #FFC107; margin-bottom:2px;'>"
+                    f"▶ {msg}</div>"
+                )
+            body = rows
+
+        n_alerts = len(warnings) + len(cautions)
+        header_color = "#FF4B4B" if warnings else "#FFC107" if cautions else "#333333"
+        header_label = (
+            f"CAS — {len(warnings)}W / {len(cautions)}C"
+            if n_alerts
+            else "CAS"
+        )
+
+        st.markdown(
+            f"<div style='"
+            f"background:#000000; border:1px solid {header_color}; "
+            f"border-radius:6px; margin-top:6px; padding:6px 4px;'>"
+            f"  <div style='font-size:0.6rem; color:{header_color}; "
+            f"  letter-spacing:2px; padding:0 6px 4px 6px;'>{header_label}</div>"
+            f"  {body}"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
     def _translate_mwc_code(self, code: int) -> tuple[str, str]:
-        """Traduz código MWC_DATA para (texto, severidade). (Fase 3)"""
-        ...
+        """Traduz código numérico MWC_DATA para (texto, severidade).
 
-    def _collect_active_faults(self, snapshot: pd.Series, fault_columns: list[str]) -> list[str]:
-        """Varre as colunas MW* e retorna os nomes das falhas ativas == 1. (Fase 3)"""
-        ...
+        Retorna ('', 'normal') para código 0 ou desconhecido.
+        """
+        if code in MWC_TRANSLATION:
+            return MWC_TRANSLATION[code]
+        if code != 0:
+            return (f"MWC CODE {code}", "caution")
+        return ("", "normal")
+
+    def _collect_active_faults(
+        self, snapshot: pd.Series, fault_columns: list[str]
+    ) -> list[tuple[str, str, str]]:
+        """Varre as colunas MW* e retorna lista de (coluna, descrição, severidade) ativas."""
+        active = []
+        for col in fault_columns:
+            val = snapshot.get(col, 0)
+            try:
+                if float(val) == 1.0:
+                    desc, sev = FAULT_DESCRIPTIONS.get(
+                        col,
+                        (col.split("_", 1)[-1].replace("_", " "), "caution"),
+                    )
+                    active.append((col, desc, sev))
+            except Exception:
+                pass
+        return active
 
 
 # -----------------------------------------------------------------------

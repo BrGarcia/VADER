@@ -1,6 +1,6 @@
 # ROADMAP — V.A.D.E.R.
 **Visualizador Analítico de Dados de Engenharia e Rastreio**
-Versão: 1.2 | Atualizado: 09 de Abril de 2026
+Versão: 1.3 | Atualizado: 09 de Abril de 2026
 
 ---
 
@@ -11,7 +11,7 @@ Versão: 1.2 | Atualizado: 09 de Abril de 2026
 | **0** | Infraestrutura e Scaffolding | Crítica | — | ✅ Concluída |
 | **1** | MVP — Núcleo de Dinâmica de Voo | Crítica | Fase 0 | ✅ Concluída |
 | **2** | Módulo do Grupo Motopropulsor | Alta | Fase 1 | ✅ Concluída |
-| **3** | Módulo de Diagnóstico e Falhas (EICAS) | Alta | Fase 1 | 🔲 Pendente |
+| **3** | Módulo de Diagnóstico e Falhas (EICAS) | Alta | Fase 1 | ✅ Concluída |
 | **4** | Polimento, Performance e Handoff | Média | Fases 2 e 3 | 🔲 Pendente |
 
 ---
@@ -115,35 +115,40 @@ Versão: 1.2 | Atualizado: 09 de Abril de 2026
 
 ---
 
-## FASE 3 — Módulo de Diagnóstico e Falhas (EICAS)
+## FASE 3 — Módulo de Diagnóstico e Falhas (EICAS) ✅
 
 **Objetivo:** Transformar o painel em ferramenta de *troubleshooting*: detectar, traduzir e exibir falhas no exato instante em que ocorreram.
-
+**Status:** Concluída em 09/04/2026
 **Referência:** SCS §RF04 | Dicionário de Dados — Fase 3 | Guia UI EICAS §3
 
 ### Entregas
 
 #### 3.1 — `TimelinePlotter.add_fault_markers()` (src/plots.py)
-- [ ] Varrer colunas `MW1_*`, `MW2_*`, `MW3_*` no DataFrame
-- [ ] Adicionar `go.Scatter` com `mode='markers'` no gráfico principal nos timestamps de falha
-- [ ] Tooltip do marcador deve exibir o nome da coluna (ex: `MW1_FT1 — Perda sensor T1`)
+- [x] Varre colunas MW1_*, MW2_*, MW3_* e adiciona marcadores `x-open` no gráfico para cada flag == 1
+- [x] Y-value usa a coluna plotada atualmente (parâmetro `y_column`) para sobrepor à curva
+- [x] Tooltip com nome curto da falha, timestamp e valor da série
+- [x] Performance corrigida: usa `df.loc[mask]` ao invés de loop `df[df["TIME"]==t]`
+- [x] `legendgroup="faults"` agrupa todas as falhas na legenda
 
 #### 3.2 — `DataLoader.get_fault_columns()` (src/data_loader.py)
-- [ ] Implementar filtragem de colunas com prefixo `MW1_`, `MW2_`, `MW3_`
+- [x] Implementado (Fase 1): filtra colunas com prefixo `MW1_`, `MW2_`, `MW3_` — 48 colunas detectadas
 
 #### 3.3 — `EICASPanel` — Janela CAS (src/ui_components.py)
-- [ ] Implementar `_translate_mwc_code()`: mapear `MWC_TRANSLATION` dict com fallback para desconhecidos
-- [ ] Implementar `_collect_active_faults()`: varrer snapshot para flags MW* == 1
-- [ ] Implementar `render_cas_window()`:
-  - Sem alertas → painel preto/vazio (simulação de voo normal)
-  - WARNINGS (vermelho) sempre acima dos CAUTIONS (amarelo)
-  - Usar `st.markdown` com HTML para colorização condicional
+- [x] `FAULT_DESCRIPTIONS`: 48 entradas mapeando colunas MW* para texto e severidade (warning/caution)
+- [x] `_translate_mwc_code()`: lookup em `MWC_TRANSLATION`; fallback `"MWC CODE {n}"` para desconhecidos
+- [x] `_collect_active_faults()`: retorna lista de (coluna, descrição, severidade) onde flag == 1
+- [x] `render_cas_window()`:
+  - Normal → painel preto com "VOO NORMAL" em cinza escuro
+  - WARNINGS (vermelho, borda esquerda) sempre acima dos CAUTIONS (amarelo, borda esquerda)
+  - Header mostra contagem `W / C` quando há alertas
+  - Borda do painel muda de cor conforme severidade máxima
 
 #### 3.4 — Integração em `app.py`
-- [ ] Conectar `EICASPanel.render()` ao snapshot do `TimeController`
-- [ ] Passar `fault_columns` do `DataLoader.get_fault_columns()` para o painel
+- [x] `add_fault_markers(fig, df, fault_columns, y_column=y_col)` conectado ao gráfico central
+- [x] `EICASPanel.render(snapshot, fault_columns)` já recebia fault_columns desde a Fase 2
+- [x] `render()` orquestra gauges + leitura de `MWC_DATA` + `render_cas_window()`
 
-**Critério de Aceite da Fase 3:**
+**Critério de Aceite da Fase 3:** ✅
 > Ao navegar pelo timeline e passar por um segundo onde `MWC_DATA == 47`, a janela CAS exibe `ENG FIRE` em vermelho. Ao retornar a um segundo normal, o painel fica em branco.
 
 ---
