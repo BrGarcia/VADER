@@ -1,77 +1,100 @@
 # V.A.D.E.R. 🦅
 **Visualizador Analítico de Dados de Engenharia e Rastreio**
 
-O **V.A.D.E.R.** é uma aplicação web local desenvolvida em Python e Streamlit, projetada para a ingestão, processamento e visualização interativa de telemetria de voo extraída de equipamentos VADR (Flight Data Recorder / Cockpit Voice Recorder), com foco inicial na aeronave A-29.
+Aplicação web local em Python/Streamlit para ingestão, processamento e visualização interativa de telemetria de voo extraída de equipamentos VADR (Flight Data Recorder), com foco na aeronave **A-29 Super Tucano**.
 
-O objetivo do sistema é correlacionar comandos de voo, atitude espacial, performance do grupo motopropulsor e mensagens de falha (EICAS) em uma linha do tempo unificada, facilitando o *troubleshooting* avançado na linha de manutenção.
+Correlaciona comandos de voo, atitude espacial, performance do grupo motopropulsor e mensagens de falha (EICAS) em uma linha do tempo unificada, facilitando o *troubleshooting* na linha de manutenção.
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
-* **Linguagem:** Python 3.9+
-* **Interface e Dashboard:** [Streamlit](https://streamlit.io/)
-* **Manipulação de Dados:** Pandas
-* **Motor Parquet:** PyArrow (ou FastParquet)
-* **Visualização Gráfica:** Plotly (Plotly Express e Graph Objects)
----
+## Execução Rápida
 
-## 💾 Arquitetura de Dados (CSV para Parquet)
-Para garantir máxima performance (60fps) na navegação pela linha do tempo e no simulador EICAS, o V.A.D.E.R. **não** processa arquivos CSV em tempo real durante a visualização.
-* **Mecanismo de Cache:** Quando um novo arquivo `.csv` é inserido no sistema, ocorre um pré-processamento rápido (stripping de headers e tipagem correta). O sistema salva uma versão binária e colunar na pasta `data/processed/` com a extensão `.parquet`.
-* As leituras subsequentes e o *Time Scrubbing* (navegação temporal) são feitos exclusivamente lendo o arquivo Parquet, garantindo um carregamento praticamente instantâneo e baixo consumo de memória RAM.
-
-## 📦 Instalação e Configuração do Ambiente
-
-Para rodar o V.A.D.E.R. na sua máquina local, siga os passos abaixo. Recomenda-se fortemente o uso de um ambiente virtual (venv) para evitar conflitos de dependências.
-
-### 1. Clone o repositório
 ```bash
-git clone https://seu-repositorio-git/vader.git
+# 1. Clone e entre na pasta
+git clone <url-do-repositorio>
 cd vader
 
-### 2. Crie e ative um ambiente virtual
-```bash
+# 2. Crie e ative o ambiente virtual
 python -m venv venv
-source venv/bin/activate  # No Windows: venv\Scripts\activate
-```
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Linux/Mac
 
-### 3. Instale as dependências
-```bash
+# 3. Instale as dependências
 pip install -r requirements.txt
-```
 
-### 4. Execute a aplicação
-```bash
+# 4. Inicie a aplicação
 streamlit run app.py
 ```
 
+Acesse `http://localhost:8501` no navegador. Carregue um arquivo `.csv` exportado pelo VADR na barra lateral.
+
 ---
 
-## 📂 Estrutura do Projeto
+## Funcionalidades
 
+| Módulo | Descrição |
+|--------|-----------|
+| **Ingestão CSV → Parquet** | Detecta e pula os 7 cabeçalhos de metadados do VADR; converte para Parquet (Snappy) em `data/processed/`; reprocessa apenas se o CSV tiver sido modificado |
+| **Linha do Tempo** | Gráfico interativo (zoom/pan) de qualquer variável numérica; bandas coloridas de voo (azul) e solo (marrom); marcadores de falha MW* sobre a curva |
+| **Horizonte Artificial** | Instrumento de atitude com pitch, roll, escada de referência e ponteiro dinâmico de bank |
+| **Gauges do Motor (EICAS)** | 7 instrumentos: Torque, ITT, Np, Ng, Fuel Flow, Oil Temp, Oil Press — com zonas de cor e needle dinâmico |
+| **Janela CAS** | Lê `MWC_DATA` e flags `MW1_*/MW2_*/MW3_*`; exibe WARNINGS (vermelho) acima de CAUTIONS (amarelo); "VOO NORMAL" quando limpo |
+| **Cards de Subsistemas** | Trem de pouso (lógica invertida LDG), carga estrutural (alerta NZ > 4G), resumo de motor, posição PCL |
+| **Time Scrubbing** | Slider temporal sincroniza todos os painéis instantaneamente |
+
+---
+
+## Estrutura do Projeto
+
+```
 vader/
+├── app.py                  # Ponto de entrada — layout e orquestração Streamlit
+├── requirements.txt        # Dependências Python
+├── .gitignore
 │
-├── data/                  # Pasta ignorada pelo Git (.gitignore)
-│   ├── raw/               # Onde o inspetor coloca os arquivos .csv originais do VADR
-│   └── processed/         # Onde o sistema salva as versões .parquet otimizadas automaticamente
+├── src/
+│   ├── data_loader.py      # Ingestão CSV → Parquet, DataLoader
+│   ├── plots.py            # TimelinePlotter, AttitudeIndicator, EngineGaugePlotter
+│   └── ui_components.py    # EICASPanel, SubsystemCards, AttitudeBox, TimeController
 │
-├── docs/                  # Documentações Técnicas
-│   ├── Dicionario_de_Dados_VADER.md
-│   ├── Guia_UI_EICAS.md
-│   └── orientacoes.md
+├── data/                   # Ignorado pelo Git
+│   ├── raw/                # CSVs originais do VADR
+│   └── processed/          # Cache .parquet gerado automaticamente
 │
-├── src/                   # Módulos Python separados
-│   ├── data_loader.py     # Lógica de ingestão (CSV -> Parquet) e limpeza com Pandas
-│   ├── plots.py           # Funções geradoras dos gráficos de linha do tempo
-│   └── ui_components.py   # Componentes visuais do Streamlit e mostradores do EICAS
+├── assets/                 # Imagens estáticas (perfis da aeronave)
 │
-├── app.py                 # Arquivo principal que monta o Dashboard
-├── requirements.txt       # Dependências do projeto
-├── .gitignore             # Arquivos ignorados pelo repositório (data/, venv/, __pycache__/)
-└── README.md              # Este arquivo
+└── docs/                   # Documentação técnica
+    ├── ROADMAP.md
+    ├── SCS.md
+    ├── Dicionario_de_Dados_VADER.md
+    ├── Guia_UI_EICAS.md
+    └── CONTRIBUTING.md
+```
 
 ---
 
-## 📸 Visualização
+## Tecnologias
+
+| Biblioteca | Uso |
+|------------|-----|
+| `streamlit >= 1.32` | Interface web e widgets |
+| `pandas >= 2.0` | Manipulação de dados, forward-fill |
+| `plotly >= 5.20` | Gráficos interativos e gauges |
+| `pyarrow >= 15.0` | Cache Parquet com compressão Snappy |
+
+---
+
+## Documentação Técnica
+
+| Documento | Conteúdo |
+|-----------|----------|
+| `docs/SCS.md` | Especificação completa de requisitos (RF, UI, RNF) |
+| `docs/Dicionario_de_Dados_VADER.md` | Mapeamento de variáveis CSV, ranges e lógica de tratamento por fase |
+| `docs/Guia_UI_EICAS.md` | Diretrizes de UX, cores, thresholds e comportamento do painel EICAS |
+| `docs/CONTRIBUTING.md` | Padrões de contribuição e workflow de desenvolvimento |
+| `docs/ROADMAP.md` | Histórico de fases e entregas |
+
+---
+
 ![A-29 Side View](assets/a29_sideview.png)
-*Diagrama de referência da aeronave A-29.*
+*A-29 Super Tucano — aeronave de referência do projeto.*

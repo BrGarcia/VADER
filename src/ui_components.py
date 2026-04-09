@@ -11,9 +11,8 @@ from __future__ import annotations
 
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 
-from src.plots import EngineGaugePlotter, AttitudeIndicator, TimelinePlotter
+from src.plots import EngineGaugePlotter, AttitudeIndicator
 
 
 # -----------------------------------------------------------------------

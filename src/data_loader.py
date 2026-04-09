@@ -7,7 +7,6 @@ e conversão para Parquet (cache binário colunar).
 from __future__ import annotations
 
 import os
-import math
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq

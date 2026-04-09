@@ -190,42 +190,33 @@ class TimelinePlotter:
             ),
         }
 
-        current_phase: str | None = None
-        band_start: float | None = None
         t_max = float(wow_data["TIME"].max())
 
-        def _close_band(phase: str, t_end: float, annotate: bool) -> None:
-            if band_start is None:
-                return
+        # Vectorized run detection — avoids iterrows over every sample row
+        phases = (wow_data["WOW"].astype(float).fillna(0).astype(int) == 1).map(
+            {True: "ground", False: "flight"}
+        )
+        run_id = phases.ne(phases.shift()).cumsum()
+
+        first_annotated: set[str] = set()
+
+        for _, group in wow_data.groupby(run_id, sort=False):
+            phase = phases.iloc[group.index[0]]
+            t_start = float(group["TIME"].iloc[0])
+            next_pos = group.index[-1] + 1
+            t_end = float(wow_data["TIME"].iloc[next_pos]) if next_pos < len(wow_data) else t_max
+
             style = _PHASE_STYLE[phase]
-            kwargs: dict = dict(
-                x0=band_start, x1=t_end,
-                fillcolor=style["fillcolor"],
-                line_width=0,
-            )
+            annotate = phase not in first_annotated
+            kwargs: dict = dict(x0=t_start, x1=t_end, fillcolor=style["fillcolor"], line_width=0)
             if annotate:
                 kwargs.update(
                     annotation_text=style["label"],
                     annotation_font=dict(color=style["label_color"], size=10),
                     annotation_position="top left",
                 )
+                first_annotated.add(phase)
             fig.add_vrect(**kwargs)
-
-        first_annotated: set[str] = set()
-
-        for _, row in wow_data.iterrows():
-            phase = "ground" if int(row["WOW"]) == 1 else "flight"
-            t = float(row["TIME"])
-
-            if phase != current_phase:
-                if current_phase is not None:
-                    _close_band(current_phase, t, annotate=current_phase not in first_annotated)
-                    first_annotated.add(current_phase)
-                current_phase = phase
-                band_start = t
-
-        if current_phase is not None:
-            _close_band(current_phase, t_max, annotate=current_phase not in first_annotated)
 
         return fig
 
