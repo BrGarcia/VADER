@@ -3,3 +3,9 @@
 .idea/
 *.log
 *.tmp
+
+# VADER - Fase 0
+data/
+venv/
+__pycache__/
+*.parquet

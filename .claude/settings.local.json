@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(mkdir -p /c/Users/brgar/Projetos/VADER/src /c/Users/brgar/Projetos/VADER/data/raw /c/Users/brgar/Projetos/VADER/data/processed)",
-      "Bash(touch /c/Users/brgar/Projetos/VADER/data/raw/.gitkeep /c/Users/brgar/Projetos/VADER/data/processed/.gitkeep)"
+      "Bash(touch /c/Users/brgar/Projetos/VADER/data/raw/.gitkeep /c/Users/brgar/Projetos/VADER/data/processed/.gitkeep)",
+      "Bash(find /c/Users/brgar/Projetos/VADER -name *.csv)",
+      "Bash(pip install:*)"
     ]
   }
 }

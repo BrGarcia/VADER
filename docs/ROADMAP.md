@@ -1,6 +1,6 @@
 # ROADMAP — V.A.D.E.R.
 **Visualizador Analítico de Dados de Engenharia e Rastreio**
-Versão: 1.0 | Data: 09 de Abril de 2026
+Versão: 1.1 | Atualizado: 09 de Abril de 2026
 
 ---
 
@@ -8,17 +8,18 @@ Versão: 1.0 | Data: 09 de Abril de 2026
 
 | Fase | Nome | Prioridade | Dependência |
 |------|------|------------|-------------|
-| **0** | Infraestrutura e Scaffolding | Crítica | — |
-| **1** | MVP — Núcleo de Dinâmica de Voo | Crítica | Fase 0 |
-| **2** | Módulo do Grupo Motopropulsor | Alta | Fase 1 |
-| **3** | Módulo de Diagnóstico e Falhas (EICAS) | Alta | Fase 1 |
-| **4** | Polimento, Performance e Handoff | Média | Fases 2 e 3 |
+| **0** | Infraestrutura e Scaffolding | Crítica | — | ✅ Concluída |
+| **1** | MVP — Núcleo de Dinâmica de Voo | Crítica | Fase 0 | ✅ Concluída |
+| **2** | Módulo do Grupo Motopropulsor | Alta | Fase 1 | 🔲 Pendente |
+| **3** | Módulo de Diagnóstico e Falhas (EICAS) | Alta | Fase 1 | 🔲 Pendente |
+| **4** | Polimento, Performance e Handoff | Média | Fases 2 e 3 | 🔲 Pendente |
 
 ---
 
-## FASE 0 — Infraestrutura e Scaffolding
+## FASE 0 — Infraestrutura e Scaffolding ✅
 
 **Objetivo:** Garantir que o ambiente de desenvolvimento esteja pronto e que toda a equipe parta da mesma base de código.
+**Status:** Concluída em 09/04/2026
 
 ### Entregas
 
@@ -29,53 +30,52 @@ Versão: 1.0 | Data: 09 de Abril de 2026
   - `src/ui_components.py` — `EICASPanel`, `SubsystemCards`, `AttitudeBox`, `TimeController`
   - `app.py` — estrutura modular com `render_sidebar()` e `render_main()`
 - [x] `requirements.txt` atualizado com versões mínimas (`streamlit`, `pandas`, `plotly`, `pyarrow`)
-- [ ] Criar e ativar ambiente virtual (`venv`) no ambiente de desenvolvimento
-- [ ] Executar `pip install -r requirements.txt` e confirmar que `streamlit run app.py` sobe sem erros
-- [ ] Configurar `.gitignore` para ignorar `data/`, `venv/`, `__pycache__/`
+- [x] Criar e ativar ambiente virtual (`venv`) no ambiente de desenvolvimento
+- [x] Executar `pip install -r requirements.txt` e confirmar que `streamlit run app.py` sobe sem erros
+- [x] Configurar `.gitignore` para ignorar `data/`, `venv/`, `__pycache__/`
 
 ---
 
-## FASE 1 — MVP: Núcleo de Dinâmica de Voo
+## FASE 1 — MVP: Núcleo de Dinâmica de Voo ✅
 
 **Objetivo:** Aplicação funcional do início ao fim: ingestão de CSV → cache Parquet → gráfico temporal interativo + sincronização de atitude.
-
+**Status:** Concluída em 09/04/2026
 **Referência:** SCS §RF01, RF02, RF03, RF05 | Dicionário de Dados — Fase 1
 
 ### Entregas
 
 #### 1.1 — `DataLoader` (src/data_loader.py)
-- [ ] Implementar `_strip_metadata_headers()`: detectar linha inicial dos dados no CSV do VADR
-- [ ] Implementar `_read_raw_csv()`: ler CSV com `skiprows` correto via Pandas
-- [ ] Implementar `_coerce_types()`: converter colunas para `float`, `int`, `datetime`; tratar `NaN` com `pd.to_numeric(errors='coerce')`
-- [ ] Implementar `_resolve_time_column()`: normalizar `TIME` / `STIME` para coluna única `TIME`
-- [ ] Implementar `convert_to_parquet()` e `load_parquet()` via PyArrow
-- [ ] Implementar `_parquet_is_fresh()`: comparar `mtime` do CSV vs Parquet para decidir reprocessamento
-- [ ] Implementar `ingest()`: pipeline completo CSV → Parquet → DataFrame
-- [ ] Implementar `get_numeric_columns()` e `get_row_at_time()`
-
-**Variáveis obrigatórias da Fase 1:** `TIME/STIME`, `BALT`, `MACH`, `AOA`, `APA`, `ARA`, `NZ`, `WOW`, `LDG`
+- [x] `_strip_metadata_headers()`: detecta linha de cabeçalho do VADR procurando "TIME" + "Rec"
+- [x] `_read_raw_csv()`: pula metadados (7 linhas) + linha de unidades via `skiprows`
+- [x] `_coerce_types()`: `pd.to_numeric(errors='coerce')` + forward-fill nas colunas críticas
+- [x] `_resolve_time_column()`: converte `HH:MM:SS.FFF → segundos decorridos`, cria `TIME_STR`
+- [x] `convert_to_parquet()` e `load_parquet()` via PyArrow (compressão Snappy)
+- [x] `_parquet_is_fresh()`: comparação de `mtime` CSV vs Parquet
+- [x] `ingest()`: pipeline completo — validado com 304 linhas × 259 colunas
+- [x] `get_numeric_columns()`: exclui flags de validade (`*V`) e colunas administrativas
+- [x] `get_row_at_time()` e `get_fault_columns()` (48 colunas MW* detectadas)
 
 #### 1.2 — `TimelinePlotter` (src/plots.py)
-- [ ] Implementar `plot()`: gráfico Plotly com Eixo X = TIME, Eixo Y = coluna selecionada; zoom/pan habilitados
-- [ ] Implementar `add_phase_bands()`: sombrear fases de voo usando `WOW`
+- [x] `plot()`: gráfico dark mode, zoom/pan, hover com timestamp em segundos
+- [x] `add_phase_bands()`: banda marrom translúcida nas fases de solo (`WOW == 0`)
 
 #### 1.3 — `AttitudeIndicator` (src/plots.py)
-- [ ] Implementar `plot(pitch, roll)`: horizonte artificial minimalista usando formas Plotly ou SVG
+- [x] `plot(pitch, roll)`: horizonte artificial com polígono de solo rotacionado por roll, escada de pitch, símbolo da aeronave em ouro, arco de roll com ponteiro dinâmico (26 traces)
 
 #### 1.4 — `TimeController` (src/ui_components.py)
-- [ ] Implementar `_init_session_state()`: inicializar `st.session_state.current_time_index = 0`
-- [ ] Implementar `render_slider()`: `st.slider` vinculado ao `session_state`
-- [ ] Implementar `get_snapshot()`: retornar `df.iloc[time_index]`
+- [x] `_init_session_state()`: inicializa `st.session_state.current_time_index = 0`
+- [x] `render_slider()`: slider com label `TIME_STR` ao lado
+- [x] `get_snapshot()`: `df.iloc[idx]` com clamp seguro
 
 #### 1.5 — `AttitudeBox` (src/ui_components.py)
-- [ ] Implementar `render()`: exibir horizonte artificial + `BALT` + `MACH` em destaque numérico
+- [x] `render()`: horizonte (3/4) + painel de métricas (ALT, MACH, PITCH, ROLL, NZ com alerta > 4G, AOA)
 
 #### 1.6 — `app.py`
-- [ ] Implementar `render_sidebar()`: `st.file_uploader` + chamada ao `DataLoader.ingest()` + Dropdown de coluna Y
-- [ ] Implementar `render_main()`: layout wide com três linhas (AttitudeBox / Timeline / Subsystems)
-- [ ] Conectar o slider ao gráfico de linha do tempo (sincronização RF05)
+- [x] `render_sidebar()`: upload → salva em `data/raw/` → `@st.cache_data` → dropdown de coluna Y
+- [x] `render_main()`: layout wide com slider, AttitudeBox, Timeline, cards básicos de subsistemas
+- [x] Cursor vermelho no gráfico sincronizado com o slider (RF05)
 
-**Critério de Aceite da Fase 1:**
+**Critério de Aceite da Fase 1:** ✅
 > Carregar um CSV de voo do A-29, navegar pelo slider de tempo e observar o horizonte artificial se movendo em sincronia com pitch e roll.
 
 ---
