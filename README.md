@@ -11,9 +11,14 @@ O objetivo do sistema é correlacionar comandos de voo, atitude espacial, perfor
 * **Linguagem:** Python 3.9+
 * **Interface e Dashboard:** [Streamlit](https://streamlit.io/)
 * **Manipulação de Dados:** Pandas
+* **Motor Parquet:** PyArrow (ou FastParquet)
 * **Visualização Gráfica:** Plotly (Plotly Express e Graph Objects)
-
 ---
+
+## 💾 Arquitetura de Dados (CSV para Parquet)
+Para garantir máxima performance (60fps) na navegação pela linha do tempo e no simulador EICAS, o V.A.D.E.R. **não** processa arquivos CSV em tempo real durante a visualização.
+* **Mecanismo de Cache:** Quando um novo arquivo `.csv` é inserido no sistema, ocorre um pré-processamento rápido (stripping de headers e tipagem correta). O sistema salva uma versão binária e colunar na pasta `data/processed/` com a extensão `.parquet`.
+* As leituras subsequentes e o *Time Scrubbing* (navegação temporal) são feitos exclusivamente lendo o arquivo Parquet, garantindo um carregamento praticamente instantâneo e baixo consumo de memória RAM.
 
 ## 📦 Instalação e Configuração do Ambiente
 
@@ -23,7 +28,6 @@ Para rodar o V.A.D.E.R. na sua máquina local, siga os passos abaixo. Recomenda-
 ```bash
 git clone https://seu-repositorio-git/vader.git
 cd vader
-```
 
 ### 2. Crie e ative um ambiente virtual
 ```bash
@@ -44,10 +48,27 @@ streamlit run app.py
 ---
 
 ## 📂 Estrutura do Projeto
-- `assets/`: Imagens e recursos visuais da aeronave A-29.
-- `docs/`: Documentação detalhada, guias de UI e manuais técnicos.
-- `app.py`: Ponto de entrada da aplicação Streamlit (em desenvolvimento).
-- `requirements.txt`: Lista de dependências do projeto.
+
+vader/
+│
+├── data/                  # Pasta ignorada pelo Git (.gitignore)
+│   ├── raw/               # Onde o inspetor coloca os arquivos .csv originais do VADR
+│   └── processed/         # Onde o sistema salva as versões .parquet otimizadas automaticamente
+│
+├── docs/                  # Documentações Técnicas
+│   ├── Dicionario_de_Dados_VADER.md
+│   ├── Guia_UI_EICAS.md
+│   └── orientacoes.md
+│
+├── src/                   # Módulos Python separados
+│   ├── data_loader.py     # Lógica de ingestão (CSV -> Parquet) e limpeza com Pandas
+│   ├── plots.py           # Funções geradoras dos gráficos de linha do tempo
+│   └── ui_components.py   # Componentes visuais do Streamlit e mostradores do EICAS
+│
+├── app.py                 # Arquivo principal que monta o Dashboard
+├── requirements.txt       # Dependências do projeto
+├── .gitignore             # Arquivos ignorados pelo repositório (data/, venv/, __pycache__/)
+└── README.md              # Este arquivo
 
 ---
 

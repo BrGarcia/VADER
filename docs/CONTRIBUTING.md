@@ -51,3 +51,13 @@ def converter_status_trem_de_pouso(df: pd.DataFrame) -> pd.DataFrame:
     """
     df['LDG_STATUS'] = df['LDG'].apply(lambda x: 'Abaixado' if x == 0 else 'Recolhido')
     return df
+```
+
+### 2.3. Ingestão de Dados e Parquet (Regra Crítica)
+**É estritamente proibido utilizar `pd.read_csv()` diretamente nas funções de plotagem ou na interface do Streamlit.**
+1. Todo processamento bruto deve passar pela classe/função `CarregadorDeDados` (ex: `data_loader.py`).
+2. A rotina deve ser:
+   - O arquivo CSV existe na pasta `/raw`?
+   - O equivalente `.parquet` existe na pasta `/processed`?
+   - Se SIM: Retorne `pd.read_parquet()`.
+   - Se NÃO: Leia o CSV com `pd.read_csv(skiprows=8)`, defina os tipos corretos (ex: converta LDG para booleano, TIME para datetime), salve com `to_parquet()` na pasta `/processed` e retorne o DataFrame.
