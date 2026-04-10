@@ -141,13 +141,6 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
     time_idx = int(st.session_state.get(TimeController.SESSION_KEY, 0))
     snapshot = controller.get_snapshot(time_idx)
 
-    # Monitor de Dados Compacto
-    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-    with m_col1: st.metric("TEMPO", f"{snapshot.get('TIME', 0):.2f}s")
-    with m_col2: st.metric("TORQUE", f"{snapshot.get('Q', 0):.1f}%")
-    with m_col3: st.metric("ITT", f"{snapshot.get('ITT', 0):.0f}°C")
-    with m_col4: st.metric("MACH", f"{snapshot.get('MACH', 0):.3f}")
-
     # Box Superior
     st.markdown("#### ✈️ Atitude e Dados Críticos")
     attitude_box.render(snapshot)
