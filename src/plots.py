@@ -240,6 +240,18 @@ class AttitudeIndicator:
 
         fig = go.Figure()
 
+        # --- Fundo do Céu (Preenche todo o viewport antes do solo) ---
+        fig.add_trace(go.Scatter(
+            x=[-1, 1, 1, -1, -1],
+            y=[-1, -1, 1, 1, -1],
+            fill="toself",
+            fillcolor=COLORS["sky"],
+            line=dict(width=0),
+            mode="lines",
+            showlegend=False,
+            hoverinfo="skip",
+        ))
+
         # --- Solo (polígono abaixo do horizonte) ---
         gx, gy = self._ground_polygon(pitch, roll)
         if gx:
@@ -367,13 +379,21 @@ class AttitudeIndicator:
             hoverinfo="skip",
         ))
 
+        # --- Borda da Box (Idêntica aos outros componentes) ---
+        fig.add_shape(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=0, y0=0, x1=1, y1=1,
+            line=dict(color="#2D2D2D", width=2),
+        )
+
         fig.update_layout(
-            paper_bgcolor=COLORS["sky"],
-            plot_bgcolor=COLORS["sky"],
+            paper_bgcolor="#0E1117",
+            plot_bgcolor="#0E1117",
             xaxis=dict(range=[-1, 1], visible=False, scaleanchor="y", scaleratio=1),
             yaxis=dict(range=[-1, 1], visible=False),
-            margin=dict(l=0, r=0, t=0, b=0),
-            height=220,
+            margin=dict(l=5, r=5, t=5, b=5),
+            height=320,
             showlegend=False,
         )
 

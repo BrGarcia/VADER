@@ -13,6 +13,7 @@ import streamlit as st
 import pandas as pd
 
 from src.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD, ENGINE_LIMITS, COLORS
+from src.ui_components.fault_panel import FaultPanel
 
 
 # -----------------------------------------------------------------------
@@ -169,9 +170,10 @@ class AttitudeBox:
 
     def __init__(self) -> None:
         self._attitude = AttitudeIndicator()
+        self._fault_panel = FaultPanel()
 
-    def render(self, snapshot: pd.Series) -> None:
-        """Renderiza horizonte artificial + box de motor (esquerda) + box de voo (direita)."""
+    def render(self, snapshot: pd.Series, fault_columns: list[str] | None = None) -> None:
+        """Renderiza painel de falhas (central) + box de motor (esquerda) + box de voo (direita)."""
 
         def _safe(key: str, fallback: float = 0.0) -> float:
             val = snapshot.get(key, fallback)
@@ -205,7 +207,7 @@ class AttitudeBox:
         with col_metrics:
             nz_color = COLORS["warning"] if abs(nz) > NZ_ALERT_THRESHOLD else "#00FF88"
             html_metrics = (
-                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3;">'
+                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3; height: 320px; display: flex; flex-direction: column; justify-content: center;">'
                 f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ALT (ft)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:#00FF88;">{altitude:,.0f}</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">MACH</div>'
@@ -221,8 +223,34 @@ class AttitudeBox:
             st.markdown(html_metrics, unsafe_allow_html=True)
 
         with col_horizon:
-            fig = self._attitude.plot(pitch, roll)
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "staticPlot": False})
+            # Horizonte Artificial (Temporariamente Desativado)
+            # fig = self._attitude.plot(pitch, roll)
+            # st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "staticPlot": False})
+
+            # Painel de Alertas (Fase 3 - Experimental)
+            active_faults = []
+            if fault_columns:
+                for col in fault_columns:
+                    if snapshot.get(col, 0) == 1:
+                        desc, sev = FAULT_DESCRIPTIONS.get(col, (col, "caution"))
+                        active_faults.append({"name": desc, "level": sev.upper()})
+            
+            # Adiciona MWC_DATA se houver
+            mwc_code = int(_safe("MWC_DATA"))
+            if mwc_code in MWC_TRANSLATION:
+                mwc_text, mwc_sev = MWC_TRANSLATION[mwc_code]
+                if mwc_text:
+                    active_faults.insert(0, {"name": mwc_text, "level": mwc_sev.upper()})
+
+            if active_faults:
+                self._fault_panel.render(active_faults)
+            else:
+                st.markdown(
+                    '<div style="height: 320px; display: flex; align-items: center; justify-content: center; border: 1px solid #2D2D2D; border-radius: 8px; color: #444; font-family: monospace;">'
+                    'SISTEMAS O.K.'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
 
         with col_engine:
             # Lógica de cor para PCL
@@ -231,7 +259,7 @@ class AttitudeBox:
             else: pcl_color = "#FF4B4B" # Max
 
             html_engine = (
-                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3;">'
+                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3; height: 320px; display: flex; flex-direction: column; justify-content: center;">'
                 f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">TORQUE (Q)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(q, "Q")};">{q:.1f}%</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ITT</div>'

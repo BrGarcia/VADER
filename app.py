@@ -56,39 +56,43 @@ def _get_recent_files() -> list[str]:
 # -----------------------------------------------------------------------
 
 def render_top_menu(df_existing: pd.DataFrame | None = None) -> tuple[pd.DataFrame | None, str | None]:
-    """Renderiza o menu superior horizontal e retorna (DataFrame, coluna_y)."""
+    """Renderiza o menu superior horizontal ultracompacto."""
     
-    with st.expander("🛠️ CONFIGURAÇÕES E DADOS DE VOO", expanded=(df_existing is None)):
-        col_file, col_var, col_info = st.columns([2, 1, 1])
+    with st.container(border=True):
+        # Título em linha única e menor
+        st.markdown("<p style='font-weight: bold; margin-bottom: 0px; font-size: 0.8rem; text-align: center;'>🛠️ CONFIGURAÇÕES E DADOS DE VOO</p>", unsafe_allow_html=True)
+        
+        col_file, col_var, col_info = st.columns([1.5, 1, 1], gap="small")
 
         with col_file:
-            st.markdown("**📂 Arquivo de Voo**")
             recent_files = _get_recent_files()
-            selected_recent = None
             if recent_files:
-                # Usamos st.session_state.get() para garantir persistência mas com chave fixa
-                selected_recent = st.selectbox(
+                st.selectbox(
                     "Histórico",
-                    options=["-- Novo Upload --"] + recent_files,
+                    options=["-- Histórico --"] + recent_files,
                     index=0,
                     label_visibility="collapsed",
                     key="top_menu_history_select"
                 )
-
-            uploaded = st.file_uploader(
-                "Upload CSV",
+            
+            st.file_uploader(
+                "Upload",
                 type=["csv"],
                 label_visibility="collapsed",
                 key="top_menu_csv_uploader"
             )
 
+        # Lógica de carga de dados (simplificada para manter o fluxo)
+        uploaded = st.session_state.get("top_menu_csv_uploader")
+        selected_recent = st.session_state.get("top_menu_history_select")
+        
         df = df_existing
         filename = "Arquivo Carregado"
 
         if uploaded is not None:
             df = _ingest(uploaded.getvalue(), uploaded.name)
             filename = uploaded.name
-        elif selected_recent and selected_recent != "-- Novo Upload --":
+        elif selected_recent and selected_recent != "-- Histórico --":
             raw_path = os.path.join(DataLoader.RAW_DIR, selected_recent)
             df = _LOADER.ingest(raw_path)
             filename = selected_recent
@@ -97,10 +101,9 @@ def render_top_menu(df_existing: pd.DataFrame | None = None) -> tuple[pd.DataFra
             return None, None
 
         with col_var:
-            st.markdown("**📊 Variável do Gráfico**")
+            st.markdown("<p style='font-size: 0.75rem; font-weight: bold; margin-bottom: -15px; text-align: center;'>📊 VARIÁVEL</p>", unsafe_allow_html=True)
             numeric_cols = _LOADER.get_numeric_columns(df)
             
-            # Tenta recuperar a última variável selecionada ou usa default
             if "last_y_col" not in st.session_state:
                 st.session_state.last_y_col = next(
                     (c for c in ("BALT", "MACH", "APA", "NZ") if c in numeric_cols),
@@ -117,11 +120,11 @@ def render_top_menu(df_existing: pd.DataFrame | None = None) -> tuple[pd.DataFra
             st.session_state.last_y_col = y_col
 
         with col_info:
-            st.markdown("**ℹ️ Info do Voo**")
+            st.markdown("<p style='font-size: 0.75rem; font-weight: bold; margin-bottom: -10px; text-align: center;'>ℹ️ INFO</p>", unsafe_allow_html=True)
             n_rows = len(df)
             duration = df["TIME"].max() if "TIME" in df.columns else 0
-            st.caption(f"📄 {filename}")
-            st.caption(f"🔢 {n_rows:,} registros | ⏱ {duration:.1f} s")
+            st.markdown(f"<p style='font-size: 0.7rem; margin-bottom: 0px; text-align: center;'>📄 {filename[:20]}...</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='font-size: 0.7rem; text-align: center;'>🔢 {n_rows:,} registros | ⏱ {duration:.1f}s</p>", unsafe_allow_html=True)
 
     return df, y_col
 
@@ -143,7 +146,7 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
 
     # Box Superior
     st.markdown("#### ✈️ Atitude e Dados Críticos")
-    attitude_box.render(snapshot)
+    attitude_box.render(snapshot, fault_columns)
 
     st.markdown("---")
 
@@ -177,8 +180,12 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
 # -----------------------------------------------------------------------
 
 def main() -> None:
-    st.title("V.A.D.E.R. 🦅")
-    st.caption("Visualizador Analítico de Dados de Engenharia e Rastreio — A-29")
+    # Cabeçalho Centralizado
+    _, col_mid, _ = st.columns([2, 1, 2])
+    with col_mid:
+        st.image("assets/a29_sideview.png", use_container_width=True)
+        st.markdown("<h1 style='text-align: center; margin-top: -20px;'>V.A.D.E.R.</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; font-style: italic; color: #888; font-size: 0.9em;'>Visualizador Analítico de Dados de Engenharia e Rastreio — A-29</p>", unsafe_allow_html=True)
 
     df_cached = st.session_state.get("current_df")
     df, y_col = render_top_menu(df_cached)
@@ -187,12 +194,6 @@ def main() -> None:
         st.session_state.current_df = df
         render_main(df, y_col)
     else:
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            try:
-                st.image("assets/a29_sideview.png", use_container_width=True)
-            except Exception:
-                pass
         st.info("📂 Configure o arquivo de voo no menu superior para iniciar a análise.")
 
 
