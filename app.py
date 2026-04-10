@@ -155,8 +155,8 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
     subsys_cards  = SubsystemCards()
     fault_columns = _LOADER.get_fault_columns(df)
 
-    # ── Slider de Tempo (AGORA NO TOPO para sincronização total) ──────
-    time_idx = controller.render_slider()
+    # Lê o índice atual do session_state antes de renderizar (para sincronia total)
+    time_idx = int(st.session_state.get(TimeController.SESSION_KEY, 0))
     snapshot = controller.get_snapshot(time_idx)
 
     # Monitor de Dados em tempo real na Sidebar para Debug
@@ -198,12 +198,11 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
             config={"scrollZoom": True, "displayModeBar": True},
         )
 
-    # ── Box Inferior: Gauges do Motor (EICAS) ───────────────────────────
-    st.markdown("---")
-    st.markdown("#### 🛠️ Grupo Motopropulsor")
-    eicas_panel.render(snapshot, fault_columns)
+    # ── Slider de Tempo (Integrado logo abaixo do gráfico) ─────────────
+    time_idx = controller.render_slider()
 
     # ── Cards de Subsistemas ─────────────────────────────────────────────
+    st.markdown("---")
     st.markdown("#### 🔧 Subsistemas")
     subsys_cards.render_all(snapshot)
 

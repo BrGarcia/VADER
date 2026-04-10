@@ -18,10 +18,12 @@ class DataLoader:
     RAW_DIR: str = "data/raw"
     PROCESSED_DIR: str = "data/processed"
 
-    # Colunas críticas da Fase 1 — forward-fill aplicado a todas
+    # Colunas críticas: sensores atualizam em sub-taxas, gerando células vazias.
+    # Aplicamos forward-fill para manter o último valor conhecido até a próxima atualização.
     CORE_COLUMNS: list[str] = [
         "BALT", "PALT", "MACH", "AS",
         "AOA", "APA", "ARA", "NZ", "WOW", "LDG",
+        "Q", "ITT", "NG", "NP", "FF", "OT", "OP",
     ]
 
     def __init__(self, raw_dir: str = RAW_DIR, processed_dir: str = PROCESSED_DIR) -> None:

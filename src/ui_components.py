@@ -12,7 +12,7 @@ from __future__ import annotations
 import streamlit as st
 import pandas as pd
 
-from src.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD
+from src.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD, ENGINE_LIMITS, COLORS
 
 
 # -----------------------------------------------------------------------
@@ -121,21 +121,15 @@ class TimeController:
         elif time_column in self.df.columns:
             time_str = f"{self.df.iloc[current_idx][time_column]:.3f}s"
 
-        col_slider, col_label = st.columns([5, 1])
-        with col_slider:
-            idx: int = st.slider(
-                "⏱ Linha do Tempo",
-                min_value=0,
-                max_value=n - 1,
-                value=current_idx,
-                key=self.SESSION_KEY,
-                help="Arraste para navegar pela gravação de voo",
-            )
-        st.markdown(
-            f"<div style='padding-top:28px; font-family:monospace; color:#00FF88;'>"
-            f"  {time_str}"
-            f"</div>",
-            unsafe_allow_html=True,
+        # Slider sem label (collapsed) para alinhar perfeitamente com a largura do gráfico acima
+        idx: int = st.slider(
+            "⏱ Linha do Tempo",
+            min_value=0,
+            max_value=n - 1,
+            value=current_idx,
+            key=self.SESSION_KEY,
+            label_visibility="collapsed",
+            help="Arraste para navegar pela gravação de voo",
         )
 
         return int(idx)
@@ -157,9 +151,9 @@ class AttitudeBox:
         self._attitude = AttitudeIndicator()
 
     def render(self, snapshot: pd.Series) -> None:
-        """Renderiza horizonte artificial + altitude (BALT) + velocidade (MACH)."""
+        """Renderiza horizonte artificial + box de motor (esquerda) + box de voo (direita)."""
 
-        def _safe(key: float | str, fallback: float = 0.0) -> float:
+        def _safe(key: str, fallback: float = 0.0) -> float:
             val = snapshot.get(key, fallback)
             try:
                 f = float(val)
@@ -167,39 +161,62 @@ class AttitudeBox:
             except Exception:
                 return fallback
 
-        pitch    = _safe("APA")
-        roll     = _safe("ARA")
-        altitude = _safe("BALT", _safe("PALT"))
-        speed    = _safe("MACH", _safe("AS"))
-        nz       = _safe("NZ")
-        aoa      = _safe("AOA")
+        # Helper para cores de alerta de motor
+        def _get_engine_color(val: float, var: str) -> str:
+            lims = ENGINE_LIMITS.get(var)
+            if not lims: return COLORS["normal"]
+            caution, warning = lims["caution"], lims["warning"]
+            if var == "OP": # Limite mínimo (Oil Press)
+                if val <= warning: return COLORS["warning"]
+                if val <= caution: return COLORS["caution"]
+            else:
+                if val >= warning: return COLORS["warning"]
+                if val >= caution: return COLORS["caution"]
+            return "#00FF88" # Verde normal se dentro dos limites
 
-        col_horizon, col_metrics = st.columns([3, 1])
+        # Dados de Voo
+        pitch, roll, altitude, speed, nz, aoa = _safe("APA"), _safe("ARA"), _safe("BALT", _safe("PALT")), _safe("MACH", _safe("AS")), _safe("NZ"), _safe("AOA")
+        
+        # Dados de Motor
+        q, itt, ng, np, ff, ot, op = _safe("Q"), _safe("ITT"), _safe("NG"), _safe("NP"), _safe("FF"), _safe("OT"), _safe("OP")
+
+        col_engine, col_horizon, col_metrics = st.columns([1, 2, 1])
+
+        with col_engine:
+            html_engine = (
+                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3;">'
+                f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">TORQUE (Q)</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(q, "Q")};">{q:.1f}%</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ITT</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(itt, "ITT")};">{itt:.0f}°C</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">NG / NP (%)</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ng, "NG")};">{ng:.1f}</span>/<span style="color:{_get_engine_color(np, "NP")};">{np:.1f}</span></div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">FUEL FLOW</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(ff, "FF")};">{ff:.0f} kg/h</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">OIL T / P</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ot, "OT")};">{ot:.0f}°</span>/<span style="color:{_get_engine_color(op, "OP")};">{op:.0f}P</span></div>'
+                f'</div>'
+            )
+            st.markdown(html_engine, unsafe_allow_html=True)
 
         with col_horizon:
             fig = self._attitude.plot(pitch, roll)
-            st.plotly_chart(
-                fig,
-                use_container_width=True,
-                config={"displayModeBar": False, "staticPlot": False},
-            )
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "staticPlot": False})
 
         with col_metrics:
-            nz_color = "#FF4B4B" if abs(nz) > 4.0 else "#00FF88"
+            nz_color = COLORS["warning"] if abs(nz) > NZ_ALERT_THRESHOLD else "#00FF88"
             html_metrics = (
                 f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3;">'
                 f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ALT (ft)</div>'
-                f'<div style="font-size:1.8rem; font-weight:bold; color:#00FF88;">{altitude:,.0f}</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:#00FF88;">{altitude:,.0f}</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">MACH</div>'
-                f'<div style="font-size:1.8rem; font-weight:bold; color:#00FF88;">{speed:.3f}</div>'
-                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">PITCH</div>'
-                f'<div style="font-size:1.1rem; color:#FFC107;">{pitch:+.1f}°</div>'
-                f'<div style="margin-top:4px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ROLL</div>'
-                f'<div style="font-size:1.1rem; color:#FFC107;">{roll:+.1f}°</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:#00FF88;">{speed:.3f}</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">PITCH / ROLL</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:#FFC107;">{pitch:+.1f}°/{roll:+.1f}°</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">NZ (G)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:{nz_color};">{nz:+.2f}G</div>'
-                f'<div style="margin-top:4px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">AOA</div>'
-                f'<div style="font-size:1.0rem; color:#FAFAFA;">{aoa:.1f}°</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">AOA</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:#FAFAFA;">{aoa:.1f}°</div>'
                 f'</div>'
             )
             st.markdown(html_metrics, unsafe_allow_html=True)
