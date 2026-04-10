@@ -101,38 +101,58 @@ class TimeController:
         self._init_session_state()
 
     def _init_session_state(self) -> None:
-        """Inicializa st.session_state.current_time_index na primeira execução."""
+        """Inicializa st.session_state.current_time_index e play_state na primeira execução."""
         if self.SESSION_KEY not in st.session_state:
             st.session_state[self.SESSION_KEY] = 0
+        if "is_playing" not in st.session_state:
+            st.session_state.is_playing = False
 
     def render_slider(self, time_column: str = "TIME") -> int:
-        """Renderiza o slider de tempo e retorna o índice selecionado."""
+        """Renderiza o slider de tempo com botão Play/Pause e retorna o índice selecionado."""
         n = len(self.df)
         if n == 0:
             return 0
 
-        # Calcula label do instante atual para exibição no slider
         current_idx: int = st.session_state.get(self.SESSION_KEY, 0)
         current_idx = max(0, min(current_idx, n - 1))
 
-        time_str = ""
-        if "TIME_STR" in self.df.columns:
-            time_str = str(self.df.iloc[current_idx].get("TIME_STR", ""))
-        elif time_column in self.df.columns:
-            time_str = f"{self.df.iloc[current_idx][time_column]:.3f}s"
+        # Layout com Colunas: Play/Pause | Slider
+        col_btn, col_sld = st.columns([1, 15])
 
-        # Slider sem label (collapsed) para alinhar perfeitamente com a largura do gráfico acima
-        idx: int = st.slider(
-            "⏱ Linha do Tempo",
-            min_value=0,
-            max_value=n - 1,
-            value=current_idx,
-            key=self.SESSION_KEY,
-            label_visibility="collapsed",
-            help="Arraste para navegar pela gravação de voo",
-        )
+        with col_btn:
+            # Ícone dinâmico Play ou Pause
+            btn_label = "⏸" if st.session_state.is_playing else "▶"
+            if st.button(btn_label, use_container_width=True, key="play_pause_btn"):
+                st.session_state.is_playing = not st.session_state.is_playing
+                st.rerun()
 
-        return int(idx)
+        with col_sld:
+            # Slider: a chave do widget agora é independente para evitar conflito de escrita
+            idx: int = st.slider(
+                "Linha do Tempo",
+                min_value=0,
+                max_value=n - 1,
+                value=current_idx,
+                key=f"{self.SESSION_KEY}_widget",
+                label_visibility="collapsed",
+            )
+            # Sincroniza o valor do slider de volta para o estado global
+            if idx != current_idx:
+                st.session_state[self.SESSION_KEY] = idx
+                st.rerun()
+
+        # Lógica de Reprodução Automática
+        if st.session_state.is_playing:
+            import time
+            if current_idx < n - 1:
+                st.session_state[self.SESSION_KEY] = current_idx + 1
+                time.sleep(0.05)
+                st.rerun()
+            else:
+                st.session_state.is_playing = False
+                st.rerun()
+
+        return int(st.session_state[self.SESSION_KEY])
 
     def get_snapshot(self, time_index: int) -> pd.Series:
         """Retorna a linha do DataFrame no índice temporal atual."""
@@ -178,30 +198,9 @@ class AttitudeBox:
         pitch, roll, altitude, speed, nz, aoa = _safe("APA"), _safe("ARA"), _safe("BALT", _safe("PALT")), _safe("MACH", _safe("AS")), _safe("NZ"), _safe("AOA")
         
         # Dados de Motor
-        q, itt, ng, np, ff, ot, op = _safe("Q"), _safe("ITT"), _safe("NG"), _safe("NP"), _safe("FF"), _safe("OT"), _safe("OP")
+        q, itt, ng, np, ff, ot, op, pcl = _safe("Q"), _safe("ITT"), _safe("NG"), _safe("NP"), _safe("FF"), _safe("OT"), _safe("OP"), _safe("PCL")
 
-        col_engine, col_horizon, col_metrics = st.columns([1, 2, 1])
-
-        with col_engine:
-            html_engine = (
-                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3;">'
-                f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">TORQUE (Q)</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(q, "Q")};">{q:.1f}%</div>'
-                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ITT</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(itt, "ITT")};">{itt:.0f}°C</div>'
-                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">NG / NP (%)</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ng, "NG")};">{ng:.1f}</span>/<span style="color:{_get_engine_color(np, "NP")};">{np:.1f}</span></div>'
-                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">FUEL FLOW</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(ff, "FF")};">{ff:.0f} kg/h</div>'
-                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">OIL T / P</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ot, "OT")};">{ot:.0f}°</span>/<span style="color:{_get_engine_color(op, "OP")};">{op:.0f}P</span></div>'
-                f'</div>'
-            )
-            st.markdown(html_engine, unsafe_allow_html=True)
-
-        with col_horizon:
-            fig = self._attitude.plot(pitch, roll)
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "staticPlot": False})
+        col_metrics, col_horizon, col_engine = st.columns([1, 2, 1])
 
         with col_metrics:
             nz_color = COLORS["warning"] if abs(nz) > NZ_ALERT_THRESHOLD else "#00FF88"
@@ -220,6 +219,32 @@ class AttitudeBox:
                 f'</div>'
             )
             st.markdown(html_metrics, unsafe_allow_html=True)
+
+        with col_horizon:
+            fig = self._attitude.plot(pitch, roll)
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "staticPlot": False})
+
+        with col_engine:
+            # Lógica de cor para PCL
+            if pcl < 0: pcl_color = "#4A90D9" # Idle
+            elif pcl < 130: pcl_color = "#00FF88" # Cruise
+            else: pcl_color = "#FF4B4B" # Max
+
+            html_engine = (
+                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3;">'
+                f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">TORQUE (Q)</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(q, "Q")};">{q:.1f}%</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ITT</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(itt, "ITT")};">{itt:.0f}°C</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">NG / NP (%)</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ng, "NG")};">{ng:.1f}</span>/<span style="color:{_get_engine_color(np, "NP")};">{np:.1f}</span></div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">MANETE (PCL)</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{pcl_color};">{pcl:.1f}°</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">OIL T / P</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ot, "OT")};">{ot:.0f}°</span>/<span style="color:{_get_engine_color(op, "OP")};">{op:.0f}P</span></div>'
+                f'</div>'
+            )
+            st.markdown(html_engine, unsafe_allow_html=True)
 
 
 # -----------------------------------------------------------------------

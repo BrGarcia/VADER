@@ -22,19 +22,18 @@ st.set_page_config(
     page_title="V.A.D.E.R.",
     page_icon="🦅",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 _LOADER = DataLoader()
 _PLOTTER = TimelinePlotter()
 
 # -----------------------------------------------------------------------
-# Cache de ingestão (só reprocessa se o conteúdo do arquivo mudar)
+# Cache de ingestão
 # -----------------------------------------------------------------------
 
 @st.cache_data(show_spinner="Processando telemetria...")
 def _ingest(file_bytes: bytes, filename: str) -> pd.DataFrame:
-    """Salva o upload em data/raw/ e aciona o DataLoader."""
     raw_path = os.path.join(DataLoader.RAW_DIR, filename)
     os.makedirs(DataLoader.RAW_DIR, exist_ok=True)
     os.makedirs(DataLoader.PROCESSED_DIR, exist_ok=True)
@@ -45,99 +44,84 @@ def _ingest(file_bytes: bytes, filename: str) -> pd.DataFrame:
     return _LOADER.ingest(raw_path)
 
 def _get_recent_files() -> list[str]:
-    """Lista arquivos CSV disponíveis em data/raw/ ordenados por data de modificação."""
     if not os.path.exists(DataLoader.RAW_DIR):
         return []
     files = [f for f in os.listdir(DataLoader.RAW_DIR) if f.endswith(".csv")]
-    # Ordena por data de modificação (mais recentes primeiro)
     files.sort(key=lambda x: os.path.getmtime(os.path.join(DataLoader.RAW_DIR, x)), reverse=True)
     return files
 
 
 # -----------------------------------------------------------------------
-# Sidebar: Ingestão + Seleção de Variável
+# Menu Superior
 # -----------------------------------------------------------------------
 
-def render_sidebar() -> tuple[pd.DataFrame | None, str | None]:
-    """Renderiza a sidebar e retorna (DataFrame, coluna_y) ou (None, None)."""
-    try:
-        st.sidebar.image("assets/a29_sideview_RL.png", use_container_width=True)
-    except Exception:
-        pass
-
-    st.sidebar.markdown("---")
-    st.sidebar.header("📂 Arquivo de Voo")
-
-    # Histórico de Arquivos
-    recent_files = _get_recent_files()
-    selected_recent = None
-    if recent_files:
-        st.sidebar.subheader("Últimas Análises")
-        # Usamos um selectbox para economizar espaço se houver muitos arquivos
-        selected_recent = st.sidebar.selectbox(
-            "Selecionar do histórico",
-            options=["-- Novo Upload --"] + recent_files,
-            index=0,
-            help="Escolha um arquivo previamente carregado ou faça upload de um novo abaixo."
-        )
-
-    uploaded = st.sidebar.file_uploader(
-        "Selecione o CSV do VADR",
-        type=["csv"],
-        help="Arquivo exportado pelo Ground Station VADR (.csv)",
-    )
-
-    df = None
-    filename = None
-
-    if uploaded is not None:
-        df = _ingest(uploaded.getvalue(), uploaded.name)
-        filename = uploaded.name
-    elif selected_recent and selected_recent != "-- Novo Upload --":
-        raw_path = os.path.join(DataLoader.RAW_DIR, selected_recent)
-        df = _LOADER.ingest(raw_path)
-        filename = selected_recent
-
-    if df is None:
-        return None, None
-
-    n_rows = len(df)
-    duration = df["TIME"].max() if "TIME" in df.columns else 0
-    st.sidebar.success(
-        f"✓ **{filename}**  \n"
-        f"📊 {n_rows:,} registros  \n"
-        f"⏱ Duração: {duration:.1f} s"
-    )
-
-    # Seleção da variável para o eixo Y
-    st.sidebar.markdown("---")
-    st.sidebar.header("📊 Variável do Gráfico")
-
-    numeric_cols = _LOADER.get_numeric_columns(df)
+def render_top_menu(df_existing: pd.DataFrame | None = None) -> tuple[pd.DataFrame | None, str | None]:
+    """Renderiza o menu superior horizontal e retorna (DataFrame, coluna_y)."""
     
-    # DEBUG: Mostrar colunas do motor se encontradas
-    engine_vars = ["Q", "ITT", "NG", "NP", "FF", "OT", "OP"]
-    found_vars = [v for v in engine_vars if v in df.columns]
-    if found_vars:
-        st.sidebar.info(f"Detectadas: {', '.join(found_vars)}")
-    else:
-        st.sidebar.error("⚠️ Colunas do motor NÃO detectadas!")
-        # Mostra as primeiras 10 colunas para ajudar no diagnóstico
-        st.sidebar.write(f"Primeiras colunas: {list(df.columns[:10])}")
+    with st.expander("🛠️ CONFIGURAÇÕES E DADOS DE VOO", expanded=(df_existing is None)):
+        col_file, col_var, col_info = st.columns([2, 1, 1])
 
-    if not numeric_cols:
-        st.sidebar.warning("Nenhuma coluna numérica encontrada.")
-        return df, None
+        with col_file:
+            st.markdown("**📂 Arquivo de Voo**")
+            recent_files = _get_recent_files()
+            selected_recent = None
+            if recent_files:
+                # Usamos st.session_state.get() para garantir persistência mas com chave fixa
+                selected_recent = st.selectbox(
+                    "Histórico",
+                    options=["-- Novo Upload --"] + recent_files,
+                    index=0,
+                    label_visibility="collapsed",
+                    key="top_menu_history_select"
+                )
 
-    default_col = next(
-        (c for c in ("BALT", "MACH", "APA", "NZ") if c in numeric_cols),
-        numeric_cols[0],
-    )
-    y_col = st.sidebar.selectbox(
-        "Eixo Y",
-        options=numeric_cols,
-        index=numeric_cols.index(default_col),
-    )
+            uploaded = st.file_uploader(
+                "Upload CSV",
+                type=["csv"],
+                label_visibility="collapsed",
+                key="top_menu_csv_uploader"
+            )
+
+        df = df_existing
+        filename = "Arquivo Carregado"
+
+        if uploaded is not None:
+            df = _ingest(uploaded.getvalue(), uploaded.name)
+            filename = uploaded.name
+        elif selected_recent and selected_recent != "-- Novo Upload --":
+            raw_path = os.path.join(DataLoader.RAW_DIR, selected_recent)
+            df = _LOADER.ingest(raw_path)
+            filename = selected_recent
+
+        if df is None:
+            return None, None
+
+        with col_var:
+            st.markdown("**📊 Variável do Gráfico**")
+            numeric_cols = _LOADER.get_numeric_columns(df)
+            
+            # Tenta recuperar a última variável selecionada ou usa default
+            if "last_y_col" not in st.session_state:
+                st.session_state.last_y_col = next(
+                    (c for c in ("BALT", "MACH", "APA", "NZ") if c in numeric_cols),
+                    numeric_cols[0] if numeric_cols else None
+                )
+
+            y_col = st.selectbox(
+                "Eixo Y",
+                options=numeric_cols,
+                index=numeric_cols.index(st.session_state.last_y_col) if st.session_state.last_y_col in numeric_cols else 0,
+                label_visibility="collapsed",
+                key="top_menu_y_axis_select"
+            )
+            st.session_state.last_y_col = y_col
+
+        with col_info:
+            st.markdown("**ℹ️ Info do Voo**")
+            n_rows = len(df)
+            duration = df["TIME"].max() if "TIME" in df.columns else 0
+            st.caption(f"📄 {filename}")
+            st.caption(f"🔢 {n_rows:,} registros | ⏱ {duration:.1f} s")
 
     return df, y_col
 
@@ -147,61 +131,49 @@ def render_sidebar() -> tuple[pd.DataFrame | None, str | None]:
 # -----------------------------------------------------------------------
 
 def render_main(df: pd.DataFrame, y_col: str) -> None:
-    """Monta o layout de três boxes sincronizados via TimeController."""
+    """Monta o layout sincronizado."""
 
     controller    = TimeController(df)
     attitude_box  = AttitudeBox()
-    eicas_panel   = EICASPanel()
     subsys_cards  = SubsystemCards()
     fault_columns = _LOADER.get_fault_columns(df)
 
-    # Lê o índice atual do session_state antes de renderizar (para sincronia total)
     time_idx = int(st.session_state.get(TimeController.SESSION_KEY, 0))
     snapshot = controller.get_snapshot(time_idx)
 
-    # Monitor de Dados em tempo real na Sidebar para Debug
-    with st.sidebar:
-        st.markdown("---")
-        st.markdown("### 🔎 Monitor Real-time")
-        q_val = snapshot.get("Q", 0)
-        itt_val = snapshot.get("ITT", 0)
-        st.write(f"**Tempo:** {snapshot.get('TIME', 0):.2f}s")
-        st.write(f"**Torque (Q):** {q_val}")
-        st.write(f"**ITT:** {itt_val}")
+    # Monitor de Dados Compacto
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    with m_col1: st.metric("TEMPO", f"{snapshot.get('TIME', 0):.2f}s")
+    with m_col2: st.metric("TORQUE", f"{snapshot.get('Q', 0):.1f}%")
+    with m_col3: st.metric("ITT", f"{snapshot.get('ITT', 0):.0f}°C")
+    with m_col4: st.metric("MACH", f"{snapshot.get('MACH', 0):.3f}")
 
-    # ── Box Superior: Horizonte Artificial + Métricas ───────────────────
-    with st.container():
-        st.markdown("#### ✈️ Atitude e Dados Críticos")
-        attitude_box.render(snapshot)
+    # Box Superior
+    st.markdown("#### ✈️ Atitude e Dados Críticos")
+    attitude_box.render(snapshot)
 
     st.markdown("---")
 
-    # ── Box Central: Gráfico Temporal ───────────────────────────────────
-    with st.container():
-        st.markdown(f"#### 📈 Análise Temporal — `{y_col}`")
+    # Box Central (Gráfico)
+    st.markdown(f"#### 📈 Análise Temporal — `{y_col}`")
+    fig = _PLOTTER.plot(df, y_col)
+    fig = _PLOTTER.add_phase_bands(fig, df)
+    fig = _PLOTTER.add_fault_markers(fig, df, fault_columns, y_column=y_col)
 
-        fig = _PLOTTER.plot(df, y_col)
-        fig = _PLOTTER.add_phase_bands(fig, df)
-        fig = _PLOTTER.add_fault_markers(fig, df, fault_columns, y_column=y_col)
+    t_cursor = float(snapshot["TIME"]) if "TIME" in snapshot else 0
+    fig.add_vline(
+        x=t_cursor,
+        line=dict(color="#FF4B4B", width=2, dash="dash"),
+        annotation_text=f"  t={t_cursor:.2f}s",
+        annotation_font=dict(color="#FF4B4B", size=11),
+    )
 
-        t_cursor = float(snapshot["TIME"]) if "TIME" in snapshot else 0
-        fig.add_vline(
-            x=t_cursor,
-            line=dict(color="#FF4B4B", width=2, dash="dash"),
-            annotation_text=f"  t={t_cursor:.2f}s",
-            annotation_font=dict(color="#FF4B4B", size=11),
-        )
+    st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True}, key=f"main_plot_{y_col}")
 
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
-            config={"scrollZoom": True, "displayModeBar": True},
-        )
+    # Slider de Tempo
+    controller.render_slider()
 
-    # ── Slider de Tempo (Integrado logo abaixo do gráfico) ─────────────
-    time_idx = controller.render_slider()
-
-    # ── Cards de Subsistemas ─────────────────────────────────────────────
+    # Cards de Subsistemas
     st.markdown("---")
     st.markdown("#### 🔧 Subsistemas")
     subsys_cards.render_all(snapshot)
@@ -215,23 +187,20 @@ def main() -> None:
     st.title("V.A.D.E.R. 🦅")
     st.caption("Visualizador Analítico de Dados de Engenharia e Rastreio — A-29")
 
-    df, y_col = render_sidebar()
+    df_cached = st.session_state.get("current_df")
+    df, y_col = render_top_menu(df_cached)
 
-    if df is None:
+    if df is not None:
+        st.session_state.current_df = df
+        render_main(df, y_col)
+    else:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             try:
                 st.image("assets/a29_sideview.png", use_container_width=True)
             except Exception:
                 pass
-        st.info("📂 Carregue um arquivo CSV do VADR na barra lateral para iniciar a análise.")
-        return
-
-    if y_col is None:
-        st.warning("Nenhuma coluna numérica encontrada no arquivo carregado.")
-        return
-
-    render_main(df, y_col)
+        st.info("📂 Configure o arquivo de voo no menu superior para iniciar a análise.")
 
 
 if __name__ == "__main__":
