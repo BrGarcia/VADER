@@ -436,13 +436,13 @@ class AttitudeIndicator:
 
 # Especificação de faixa e unidade de cada instrumento do motor
 GAUGE_SPECS: dict[str, dict] = {
-    "Q":   {"min": 0,   "max": 130,  "unit": "%",    "label": "TORQUE"},
-    "ITT": {"min": 0,   "max": 1100, "unit": "°C",   "label": "ITT"},
-    "NP":  {"min": 0,   "max": 120,  "unit": "%",    "label": "Np"},
-    "NG":  {"min": 0,   "max": 115,  "unit": "%",    "label": "Ng"},
-    "FF":  {"min": 0,   "max": 500,  "unit": "kg/h", "label": "F.FLOW"},
-    "OT":  {"min": 0,   "max": 150,  "unit": "°C",   "label": "OIL TEMP"},
-    "OP":  {"min": 0,   "max": 200,  "unit": "PSI",  "label": "OIL PRESS"},
+    "Q":   {"min": 0,   "max": 130,  "unit": "%",    "label": "TORQUE (Q)"},
+    "ITT": {"min": 0,   "max": 1100, "unit": "°C",   "label": "ITT (ITT)"},
+    "NP":  {"min": 0,   "max": 120,  "unit": "%",    "label": "Np (NP)"},
+    "NG":  {"min": 0,   "max": 115,  "unit": "%",    "label": "Ng (NG)"},
+    "FF":  {"min": 0,   "max": 500,  "unit": "kg/h", "label": "F.FLOW (FF)"},
+    "OT":  {"min": 0,   "max": 150,  "unit": "°C",   "label": "OIL TEMP (OT)"},
+    "OP":  {"min": 0,   "max": 200,  "unit": "PSI",  "label": "OIL PRESS (OP)"},
 }
 
 # Variáveis cujo limite é mínimo (abaixo = problema), ao contrário das demais

@@ -12,7 +12,7 @@ from __future__ import annotations
 import streamlit as st
 import pandas as pd
 
-from src.plots import EngineGaugePlotter, AttitudeIndicator
+from src.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD
 
 
 # -----------------------------------------------------------------------
@@ -131,13 +131,12 @@ class TimeController:
                 key=self.SESSION_KEY,
                 help="Arraste para navegar pela gravação de voo",
             )
-        with col_label:
-            st.markdown(
-                f"<div style='padding-top:28px; font-family:monospace; color:#00FF88;'>"
-                f"  {time_str}"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
+        st.markdown(
+            f"<div style='padding-top:28px; font-family:monospace; color:#00FF88;'>"
+            f"  {time_str}"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
         return int(idx)
 
@@ -187,38 +186,23 @@ class AttitudeBox:
 
         with col_metrics:
             nz_color = "#FF4B4B" if abs(nz) > 4.0 else "#00FF88"
-            st.markdown(
-                f"""
-                <div style="
-                    font-family: monospace;
-                    background: #0E1117;
-                    border: 1px solid #2D2D2D;
-                    border-radius: 8px;
-                    padding: 14px 10px;
-                    text-align: center;
-                    line-height: 1.3;
-                ">
-                    <div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ALT (ft)</div>
-                    <div style="font-size:1.8rem; font-weight:bold; color:#00FF88;">{altitude:,.0f}</div>
-
-                    <div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">MACH</div>
-                    <div style="font-size:1.8rem; font-weight:bold; color:#00FF88;">{speed:.3f}</div>
-
-                    <div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">PITCH</div>
-                    <div style="font-size:1.1rem; color:#FFC107;">{pitch:+.1f}°</div>
-
-                    <div style="margin-top:4px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ROLL</div>
-                    <div style="font-size:1.1rem; color:#FFC107;">{roll:+.1f}°</div>
-
-                    <div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">NZ (G)</div>
-                    <div style="font-size:1.4rem; font-weight:bold; color:{nz_color};">{nz:+.2f}G</div>
-
-                    <div style="margin-top:4px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">AOA</div>
-                    <div style="font-size:1.0rem; color:#FAFAFA;">{aoa:.1f}°</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            html_metrics = (
+                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3;">'
+                f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ALT (ft)</div>'
+                f'<div style="font-size:1.8rem; font-weight:bold; color:#00FF88;">{altitude:,.0f}</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">MACH</div>'
+                f'<div style="font-size:1.8rem; font-weight:bold; color:#00FF88;">{speed:.3f}</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">PITCH</div>'
+                f'<div style="font-size:1.1rem; color:#FFC107;">{pitch:+.1f}°</div>'
+                f'<div style="margin-top:4px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ROLL</div>'
+                f'<div style="font-size:1.1rem; color:#FFC107;">{roll:+.1f}°</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">NZ (G)</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{nz_color};">{nz:+.2f}G</div>'
+                f'<div style="margin-top:4px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">AOA</div>'
+                f'<div style="font-size:1.0rem; color:#FAFAFA;">{aoa:.1f}°</div>'
+                f'</div>'
             )
+            st.markdown(html_metrics, unsafe_allow_html=True)
 
 
 # -----------------------------------------------------------------------
@@ -245,11 +229,15 @@ class EICASPanel:
         except Exception:
             mwc_code = 0
 
-        mw_flags = {
-            col: int(float(snapshot.get(col, 0)) or 0)
-            for col in fault_columns
-            if col in snapshot.index
-        }
+        mw_flags = {}
+        for col in fault_columns:
+            if col in snapshot.index:
+                val = snapshot.get(col, 0)
+                try:
+                    fval = float(val)
+                    mw_flags[col] = int(fval) if fval == fval else 0
+                except (ValueError, TypeError):
+                    mw_flags[col] = 0
         self.render_cas_window(mwc_code, mw_flags)
 
     def render_engine_gauges(self, snapshot: pd.Series) -> None:
@@ -262,12 +250,13 @@ class EICASPanel:
 
         figs = self._gauge_plotter.plot_all_engine_gauges(snapshot)
         cols = st.columns(7)
-        for col, fig in zip(cols, figs):
+        for i, (col, fig) in enumerate(zip(cols, figs)):
             with col:
                 st.plotly_chart(
                     fig,
                     use_container_width=True,
                     config={"displayModeBar": False, "staticPlot": True},
+                    key=f"gauge_{i}_{snapshot.name}" # snapshot.name é o índice da linha (tempo)
                 )
 
         st.markdown("</div>", unsafe_allow_html=True)

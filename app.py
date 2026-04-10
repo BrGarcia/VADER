@@ -44,6 +44,15 @@ def _ingest(file_bytes: bytes, filename: str) -> pd.DataFrame:
 
     return _LOADER.ingest(raw_path)
 
+def _get_recent_files() -> list[str]:
+    """Lista arquivos CSV disponíveis em data/raw/ ordenados por data de modificação."""
+    if not os.path.exists(DataLoader.RAW_DIR):
+        return []
+    files = [f for f in os.listdir(DataLoader.RAW_DIR) if f.endswith(".csv")]
+    # Ordena por data de modificação (mais recentes primeiro)
+    files.sort(key=lambda x: os.path.getmtime(os.path.join(DataLoader.RAW_DIR, x)), reverse=True)
+    return files
+
 
 # -----------------------------------------------------------------------
 # Sidebar: Ingestão + Seleção de Variável
@@ -52,12 +61,25 @@ def _ingest(file_bytes: bytes, filename: str) -> pd.DataFrame:
 def render_sidebar() -> tuple[pd.DataFrame | None, str | None]:
     """Renderiza a sidebar e retorna (DataFrame, coluna_y) ou (None, None)."""
     try:
-        st.sidebar.image("assets/a29_sideview_RL.png", use_column_width=True)
+        st.sidebar.image("assets/a29_sideview_RL.png", use_container_width=True)
     except Exception:
         pass
 
     st.sidebar.markdown("---")
     st.sidebar.header("📂 Arquivo de Voo")
+
+    # Histórico de Arquivos
+    recent_files = _get_recent_files()
+    selected_recent = None
+    if recent_files:
+        st.sidebar.subheader("Últimas Análises")
+        # Usamos um selectbox para economizar espaço se houver muitos arquivos
+        selected_recent = st.sidebar.selectbox(
+            "Selecionar do histórico",
+            options=["-- Novo Upload --"] + recent_files,
+            index=0,
+            help="Escolha um arquivo previamente carregado ou faça upload de um novo abaixo."
+        )
 
     uploaded = st.sidebar.file_uploader(
         "Selecione o CSV do VADR",
@@ -65,16 +87,26 @@ def render_sidebar() -> tuple[pd.DataFrame | None, str | None]:
         help="Arquivo exportado pelo Ground Station VADR (.csv)",
     )
 
-    if uploaded is None:
-        return None, None
+    df = None
+    filename = None
 
-    df = _ingest(uploaded.getvalue(), uploaded.name)
+    if uploaded is not None:
+        df = _ingest(uploaded.getvalue(), uploaded.name)
+        filename = uploaded.name
+    elif selected_recent and selected_recent != "-- Novo Upload --":
+        raw_path = os.path.join(DataLoader.RAW_DIR, selected_recent)
+        df = _LOADER.ingest(raw_path)
+        filename = selected_recent
+
+    if df is None:
+        return None, None
 
     n_rows = len(df)
     duration = df["TIME"].max() if "TIME" in df.columns else 0
     st.sidebar.success(
-        f"✓ **{n_rows:,}** registros  \n"
-        f"⏱ Duração: **{duration:.1f} s**"
+        f"✓ **{filename}**  \n"
+        f"📊 {n_rows:,} registros  \n"
+        f"⏱ Duração: {duration:.1f} s"
     )
 
     # Seleção da variável para o eixo Y
@@ -82,6 +114,17 @@ def render_sidebar() -> tuple[pd.DataFrame | None, str | None]:
     st.sidebar.header("📊 Variável do Gráfico")
 
     numeric_cols = _LOADER.get_numeric_columns(df)
+    
+    # DEBUG: Mostrar colunas do motor se encontradas
+    engine_vars = ["Q", "ITT", "NG", "NP", "FF", "OT", "OP"]
+    found_vars = [v for v in engine_vars if v in df.columns]
+    if found_vars:
+        st.sidebar.info(f"Detectadas: {', '.join(found_vars)}")
+    else:
+        st.sidebar.error("⚠️ Colunas do motor NÃO detectadas!")
+        # Mostra as primeiras 10 colunas para ajudar no diagnóstico
+        st.sidebar.write(f"Primeiras colunas: {list(df.columns[:10])}")
+
     if not numeric_cols:
         st.sidebar.warning("Nenhuma coluna numérica encontrada.")
         return df, None
@@ -112,9 +155,19 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
     subsys_cards  = SubsystemCards()
     fault_columns = _LOADER.get_fault_columns(df)
 
-    # Lê o índice atual do session_state sem renderizar o slider ainda
-    time_idx = int(st.session_state.get(TimeController.SESSION_KEY, 0))
+    # ── Slider de Tempo (AGORA NO TOPO para sincronização total) ──────
+    time_idx = controller.render_slider()
     snapshot = controller.get_snapshot(time_idx)
+
+    # Monitor de Dados em tempo real na Sidebar para Debug
+    with st.sidebar:
+        st.markdown("---")
+        st.markdown("### 🔎 Monitor Real-time")
+        q_val = snapshot.get("Q", 0)
+        itt_val = snapshot.get("ITT", 0)
+        st.write(f"**Tempo:** {snapshot.get('TIME', 0):.2f}s")
+        st.write(f"**Torque (Q):** {q_val}")
+        st.write(f"**ITT:** {itt_val}")
 
     # ── Box Superior: Horizonte Artificial + Métricas ───────────────────
     with st.container():
@@ -131,23 +184,19 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
         fig = _PLOTTER.add_phase_bands(fig, df)
         fig = _PLOTTER.add_fault_markers(fig, df, fault_columns, y_column=y_col)
 
-        if "TIME" in df.columns:
-            t_cursor = float(df.iloc[time_idx]["TIME"])
-            fig.add_vline(
-                x=t_cursor,
-                line=dict(color="#FF4B4B", width=2, dash="dash"),
-                annotation_text=f"  t={t_cursor:.2f}s",
-                annotation_font=dict(color="#FF4B4B", size=11),
-            )
+        t_cursor = float(snapshot["TIME"]) if "TIME" in snapshot else 0
+        fig.add_vline(
+            x=t_cursor,
+            line=dict(color="#FF4B4B", width=2, dash="dash"),
+            annotation_text=f"  t={t_cursor:.2f}s",
+            annotation_font=dict(color="#FF4B4B", size=11),
+        )
 
         st.plotly_chart(
             fig,
             use_container_width=True,
             config={"scrollZoom": True, "displayModeBar": True},
         )
-
-    # ── Slider de Tempo (abaixo do gráfico) ─────────────────────────────
-    time_idx = controller.render_slider()
 
     # ── Box Inferior: Gauges do Motor (EICAS) ───────────────────────────
     st.markdown("---")
@@ -173,7 +222,7 @@ def main() -> None:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             try:
-                st.image("assets/a29_sideview.png", use_column_width=True)
+                st.image("assets/a29_sideview.png", use_container_width=True)
             except Exception:
                 pass
         st.info("📂 Carregue um arquivo CSV do VADR na barra lateral para iniciar a análise.")

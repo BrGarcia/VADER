@@ -79,6 +79,8 @@ class DataLoader:
             na_values=["", " "],
             keep_default_na=True,
         )
+        # Limpa espaços em branco nos nomes das colunas
+        df.columns = [c.strip() for c in df.columns]
         return df
 
     def _coerce_types(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -144,7 +146,9 @@ class DataLoader:
 
     def load_parquet(self, parquet_path: str) -> pd.DataFrame:
         """Lê um arquivo Parquet previamente processado."""
-        return pq.read_table(parquet_path).to_pandas()
+        df = pq.read_table(parquet_path).to_pandas()
+        df.columns = [c.strip() for c in df.columns]
+        return df
 
     def _get_parquet_path(self, csv_filepath: str) -> str:
         """Calcula o caminho .parquet correspondente ao csv fornecido."""
