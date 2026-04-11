@@ -1,6 +1,6 @@
 # ROADMAP — V.A.D.E.R.
 **Visualizador Analítico de Dados de Engenharia e Rastreio**
-Versão: 2.1 | Atualizado: 10 de Abril de 2026
+Versão: 2.2 | Atualizado: 11 de Abril de 2026
 
 ---
 
@@ -151,7 +151,8 @@ Esta seção documenta problemas identificados durante a inspeção do código a
 | Documento | Conteúdo |
 |-----------|----------|
 | `SCS.md` | Especificação completa de requisitos (RF, UI, RNF) |
-| `Dicionario_de_Dados_VADER.md` | Mapeamento de variáveis CSV por fase |
+| `Dicionario_de_Dados_VADER.md` | Mapeamento de variáveis CSV por fase, classificado por tipo de sinal (v2.0) |
+| `aircraft_telemetry_schema_v1.json` | **Schema de telemetria** — fonte de verdade para tipo de sinal (`analog`/`digital`/`metadata`) por sistema |
 | `EICAS.md` | Especificação técnica do sistema EICAS do A-29 |
 | `VADR.md` | Especificação técnica do sistema VADR do A-29 |
 | `IDEIAS.MD` | Banco de ideias e funcionalidades futuras catalogadas |
@@ -294,7 +295,8 @@ Esta seção documenta problemas identificados durante a inspeção do código a
 | Documento | Conteúdo |
 |-----------|----------|
 | `SCS.md` | Especificação completa de requisitos (RF, UI, RNF) |
-| `Dicionario_de_Dados_VADER.md` | Mapeamento de variáveis CSV por fase |
+| `Dicionario_de_Dados_VADER.md` | Mapeamento de variáveis CSV por fase, classificado por tipo de sinal (v2.0) |
+| `aircraft_telemetry_schema_v1.json` | **Schema de telemetria** — fonte de verdade para tipo de sinal (`analog`/`digital`/`metadata`) por sistema |
 | `EICAS.md` | Especificação técnica do sistema EICAS do A-29 |
 | `VADR.md` | Especificação técnica do sistema VADR do A-29 |
 | `Guia_UI_EICAS.md` | Guia de interface para o painel de alertas |

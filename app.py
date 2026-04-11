@@ -52,89 +52,157 @@ def _get_recent_files() -> list[str]:
 
 
 # -----------------------------------------------------------------------
-# Menu Superior
+# Landing Page
 # -----------------------------------------------------------------------
 
-def render_top_menu(df_existing: pd.DataFrame | None = None) -> tuple[pd.DataFrame | None, str | None]:
-    """Renderiza o menu superior horizontal ultracompacto."""
-    
-    with st.container(border=True):
-        # Título em linha única e menor
-        st.markdown("<p style='font-weight: bold; margin-bottom: 0px; font-size: 0.8rem; text-align: center;'>🛠️ CONFIGURAÇÕES E DADOS DE VOO</p>", unsafe_allow_html=True)
-        
-        col_file, col_var, col_info = st.columns([1.5, 1, 1], gap="small")
+def render_landing() -> None:
+    """Landing page: cabeçalho + box de upload + botão ENVIAR."""
 
-        with col_file:
-            recent_files = _get_recent_files()
+    recent_files = _get_recent_files()
+
+    # ── Cabeçalho centralizado ──
+    _, col_mid, _ = st.columns([2, 1, 2])
+    with col_mid:
+        st.image("assets/a29_sideview.png", use_container_width=True)
+        st.markdown("<h1 style='text-align: center; margin-top: -20px;'>V.A.D.E.R.</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; font-style: italic; color: #888; font-size: 0.9em;'>Visualizador Analítico de Dados de Engenharia e Rastreio — A-29</p>", unsafe_allow_html=True)
+
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+
+    # ── Box de configuração centralizado ──
+    _l, _box, _r = st.columns([1, 2, 1])
+    with _box:
+        with st.container(border=True):
+            st.markdown("<p style='font-weight: bold; margin-bottom: 8px; font-size: 0.85rem; text-align: center;'>🛠️ CONFIGURAÇÕES E DADOS DE VOO</p>", unsafe_allow_html=True)
+
+            # Histórico
             if recent_files:
+                st.markdown("<p style='font-size: 0.72rem; font-weight: bold; margin-bottom: 0px; text-align: center;'>📁 HISTÓRICO</p>", unsafe_allow_html=True)
                 st.selectbox(
                     "Histórico",
-                    options=["-- Histórico --"] + recent_files,
+                    options=["-- Selecione um voo recente --"] + recent_files,
                     index=0,
                     label_visibility="collapsed",
-                    key="top_menu_history_select"
+                    key="landing_history_select"
                 )
-            
+
+            # Upload
+            st.markdown("<p style='font-size: 0.72rem; font-weight: bold; margin-bottom: 0px; text-align: center;'>⬆️ UPLOAD CSV</p>", unsafe_allow_html=True)
             st.file_uploader(
-                "Upload",
+                "Upload CSV",
                 type=["csv"],
                 label_visibility="collapsed",
-                key="top_menu_csv_uploader"
+                key="landing_csv_uploader"
             )
 
-        # Lógica de carga de dados (simplificada para manter o fluxo)
-        uploaded = st.session_state.get("top_menu_csv_uploader")
-        selected_recent = st.session_state.get("top_menu_history_select")
-        
-        df = df_existing
-        filename = "Arquivo Carregado"
+            # Feedback de seleção
+            st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+            uploaded = st.session_state.get("landing_csv_uploader")
+            selected_recent = st.session_state.get("landing_history_select")
+            arquivo_pronto = uploaded is not None or (
+                selected_recent and selected_recent != "-- Selecione um voo recente --"
+            )
 
-        if uploaded is not None:
-            df = _ingest(uploaded.getvalue(), uploaded.name)
-            filename = uploaded.name
-        elif selected_recent and selected_recent != "-- Histórico --":
-            raw_path = os.path.join(DataLoader.RAW_DIR, selected_recent)
-            df = _LOADER.ingest(raw_path)
-            filename = selected_recent
+            if arquivo_pronto:
+                nome = uploaded.name if uploaded else selected_recent
+                st.markdown(f"<p style='font-size: 0.72rem; text-align: center; color: #4CAF50; margin-top: 2px;'>✅ {nome}</p>", unsafe_allow_html=True)
+            else:
+                st.markdown("<p style='font-size: 0.72rem; text-align: center; color: #888; margin-top: 2px;'>Selecione um arquivo CSV para habilitar o envio.</p>", unsafe_allow_html=True)
 
-        if df is None:
-            return None, None
-
-        with col_var:
-            st.markdown("<p style='font-size: 0.75rem; font-weight: bold; margin-bottom: -15px; text-align: center;'>📊 VARIÁVEL</p>", unsafe_allow_html=True)
-            numeric_cols = _LOADER.get_numeric_columns(df)
-            
-            if "last_y_col" not in st.session_state:
-                st.session_state.last_y_col = next(
-                    (c for c in ("BALT", "MACH", "APA", "NZ") if c in numeric_cols),
-                    numeric_cols[0] if numeric_cols else None
+            # ── Botão ENVIAR ──
+            _, btn_col, _ = st.columns([1, 2, 1])
+            with btn_col:
+                enviar = st.button(
+                    "▶  ENVIAR",
+                    type="primary",
+                    use_container_width=True,
+                    key="landing_submit_btn",
+                    disabled=not arquivo_pronto,
                 )
 
-            y_col = st.selectbox(
-                "Eixo Y",
-                options=numeric_cols,
-                index=numeric_cols.index(st.session_state.last_y_col) if st.session_state.last_y_col in numeric_cols else 0,
-                label_visibility="collapsed",
-                key="top_menu_y_axis_select"
-            )
-            st.session_state.last_y_col = y_col
+            # ── Processa somente ao clicar ENVIAR ──
+            if enviar:
+                if uploaded is not None:
+                    new_df = _ingest(uploaded.getvalue(), uploaded.name)
+                    if new_df is not None:
+                        st.session_state.current_df = new_df
+                        st.session_state.current_filename = uploaded.name
+                        st.rerun()
+                    else:
+                        st.error("❌ Falha ao processar o arquivo CSV.")
+                elif selected_recent and selected_recent != "-- Selecione um voo recente --":
+                    raw_path = os.path.join(DataLoader.RAW_DIR, selected_recent)
+                    new_df = _LOADER.ingest(raw_path)
+                    if new_df is not None:
+                        st.session_state.current_df = new_df
+                        st.session_state.current_filename = selected_recent
+                        st.rerun()
+                    else:
+                        st.error("❌ Falha ao carregar o arquivo do histórico.")
 
+
+# -----------------------------------------------------------------------
+# Menu compacto (página de análise)
+# -----------------------------------------------------------------------
+
+def render_bottom_panel(df: pd.DataFrame) -> None:
+    """Painel inferior: troca de arquivo, info e botão Nova Análise."""
+
+    recent_files = _get_recent_files()
+
+    st.markdown("---")
+    with st.container(border=True):
+        st.markdown("<p style='font-weight: bold; margin-bottom: 4px; font-size: 0.8rem; text-align: center;'>🛠️ CONFIGURAÇÕES E DADOS DE VOO</p>", unsafe_allow_html=True)
+
+        col_file, col_info, col_btn = st.columns([2, 1.5, 1], gap="small")
+
+        # ── Troca rápida de arquivo ──
+        with col_file:
+            _l, _mid, _r = st.columns([0.05, 0.9, 0.05])
+            with _mid:
+                opcoes = ["── Arquivo atual ──"] + (recent_files if recent_files else [])
+                sel = st.selectbox(
+                    "Trocar arquivo",
+                    options=opcoes,
+                    index=0,
+                    label_visibility="collapsed",
+                    key="analysis_history_select"
+                )
+                if sel and sel != "── Arquivo atual ──":
+                    if st.button("▶  Carregar", key="analysis_load_btn", use_container_width=True):
+                        raw_path = os.path.join(DataLoader.RAW_DIR, sel)
+                        new_df = _LOADER.ingest(raw_path)
+                        if new_df is not None:
+                            st.session_state.current_df = new_df
+                            st.session_state.current_filename = sel
+                            st.rerun()
+
+        # ── Info do arquivo atual ──
         with col_info:
             st.markdown("<p style='font-size: 0.75rem; font-weight: bold; margin-bottom: -10px; text-align: center;'>ℹ️ INFO</p>", unsafe_allow_html=True)
             n_rows = len(df)
             duration = df["TIME"].max() if "TIME" in df.columns else 0
-            st.markdown(f"<p style='font-size: 0.7rem; margin-bottom: 0px; text-align: center;'>📄 {filename[:20]}...</p>", unsafe_allow_html=True)
+            fname = st.session_state.get("current_filename", "arquivo")
+            st.markdown(f"<p style='font-size: 0.7rem; margin-bottom: 0px; text-align: center;'>📄 {fname[:24]}</p>", unsafe_allow_html=True)
             st.markdown(f"<p style='font-size: 0.7rem; text-align: center;'>🔢 {n_rows:,} registros | ⏱ {duration:.1f}s</p>", unsafe_allow_html=True)
 
-    return df, y_col
+        # ── Botão Nova Análise ──
+        with col_btn:
+            st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+            if st.button("🔄  NOVA ANÁLISE", key="btn_nova_analise", use_container_width=True):
+                # Limpa o estado e retorna à landing page
+                for key in ["current_df", "current_filename", "last_y_col",
+                             TimeController.SESSION_KEY]:
+                    st.session_state.pop(key, None)
+                st.rerun()
 
 
 # -----------------------------------------------------------------------
-# Layout Principal
+# Layout Principal (Análise)
 # -----------------------------------------------------------------------
 
-def render_main(df: pd.DataFrame, y_col: str) -> None:
-    """Monta o layout sincronizado."""
+def render_main(df: pd.DataFrame) -> str | None:
+    """Monta o layout sincronizado de análise. Retorna y_col selecionado."""
 
     controller    = TimeController(df)
     attitude_box  = AttitudeBox()
@@ -154,14 +222,36 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
     time_idx = int(st.session_state.get(TimeController.SESSION_KEY, 0))
     snapshot = controller.get_snapshot(time_idx)
 
-    # Box Superior
+    # Atitude e Dados Críticos
     st.markdown("#### ✈️ Atitude e Dados Críticos")
     attitude_box.render(snapshot, fault_columns)
 
     st.markdown("---")
 
-    # Box Central (Gráfico)
-    st.markdown(f"#### 📈 Análise Temporal — `{y_col}`")
+    # ── Análise Temporal: título + seletor de variável inline ──
+    numeric_cols = _LOADER.get_numeric_columns(df)
+    if "last_y_col" not in st.session_state:
+        st.session_state.last_y_col = next(
+            (c for c in ("BALT", "MACH", "APA", "NZ") if c in numeric_cols),
+            numeric_cols[0] if numeric_cols else None
+        )
+
+    col_titulo, col_sel = st.columns([3, 1], gap="small")
+    with col_titulo:
+        # placeholder — será preenchido após definir y_col
+        titulo_placeholder = st.empty()
+    with col_sel:
+        y_col = st.selectbox(
+            "Variável",
+            options=numeric_cols,
+            index=numeric_cols.index(st.session_state.last_y_col) if st.session_state.last_y_col in numeric_cols else 0,
+            label_visibility="collapsed",
+            key="main_y_axis_select"
+        )
+        st.session_state.last_y_col = y_col
+
+    titulo_placeholder.markdown(f"#### 📈 Análise Temporal — `{y_col}`")
+
     fig = _PLOTTER.plot(df, y_col)
     fig = _PLOTTER.add_phase_bands(fig, df)
     fig = _PLOTTER.add_fault_markers(fig, df, fault_columns, y_column=y_col)
@@ -180,11 +270,13 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
     controller.render_slider()
 
     # Cards de Subsistemas
-    st.markdown("---")
     st.markdown("#### 🔧 Subsistemas")
     subsys_cards.render_all(snapshot)
 
+    # Painel inferior (configurações + nova análise)
+    render_bottom_panel(df)
 
+    return y_col
 
 
 # -----------------------------------------------------------------------
@@ -192,42 +284,14 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
 # -----------------------------------------------------------------------
 
 def main() -> None:
-    # Cabeçalho Centralizado
-    _, col_mid, _ = st.columns([2, 1, 2])
-    with col_mid:
-        st.image("assets/a29_sideview.png", use_container_width=True)
-        st.markdown("<h1 style='text-align: center; margin-top: -20px;'>V.A.D.E.R.</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; font-style: italic; color: #888; font-size: 0.9em;'>Visualizador Analítico de Dados de Engenharia e Rastreio — A-29</p>", unsafe_allow_html=True)
-
     df_cached = st.session_state.get("current_df")
 
     if df_cached is not None:
-        # Menu no topo — atualiza df e y_col (única instância, corrige B-01)
-        df, y_col = render_top_menu(df_cached)
-
-        # Se o menu carregou um arquivo diferente, atualiza o cache e reinicia
-        if df is not None and df is not df_cached:
-            st.session_state.current_df = df
-            st.rerun()
-
-        # B-02: garante que y_col é válida para o DataFrame atual
-        numeric_cols = _LOADER.get_numeric_columns(df_cached)
-        if y_col not in numeric_cols:
-            y_col = next(
-                (c for c in ("BALT", "MACH", "APA", "NZ") if c in numeric_cols),
-                numeric_cols[0] if numeric_cols else None,
-            )
-            st.session_state.last_y_col = y_col
-
-        if y_col is not None:
-            render_main(df_cached, y_col)
+        # ── Página de Análise ──
+        render_main(df_cached)
     else:
-        # Sem dados ainda — mostra apenas o menu de upload
-        df, y_col = render_top_menu(None)
-        if df is not None:
-            st.session_state.current_df = df
-            st.rerun()
-        st.info("📂 Configure o arquivo de voo no menu acima para iniciar a análise.")
+        # ── Landing Page ──
+        render_landing()
 
 
 if __name__ == "__main__":

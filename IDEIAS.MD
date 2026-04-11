@@ -14,11 +14,13 @@ Este arquivo serve para registrar sugestões, melhorias e novas funcionalidades 
 - **Descrição:** Criar uma lógica para detectar e exibir o estado "EM TRÂNSITO" do trem de pouso.
 - **Motivação:** Como o CSV não fornece uma variável de transição, podemos inferir o movimento monitorando a mudança de estado da variável `LDG`.
 - **Visual:** O rótulo mudaria para "EM TRÂNSITO..." em cor âmbar durante a mudança de estado.
+- **Parecer:** Ainda nao se faz necessario porém podemos implementar um timer que conta quanto tempo o trem de pouso está em transição e se passar de um certo tempo (opor exemplo 5 segundos), exibir um alerta. verificar com tecnico da área qual o esse tempo limite.
 
 ### I-06: Verificação de Matriz de Validade (Octal 3)
 - **Descrição:** Utilizar as colunas de validade (ex: `BALTV`, `MACHV`, `ITTV`) para validar as leituras.
 - **Motivação:** Conforme o manual `VADR.md`, um dado só é confiável se sua matriz de validade for `3`. Se for `0`, o dado é inválido.
 - **Visual:** Adicionar um indicador visual (ex: contorno tracejado ou cor cinza) quando o dado exibido estiver com flag de validade inválida no CSV.
+- **Parecer:** Implementar na fase 5, na proxima revisao do arquivo IDEIAS.MD mover esse requisito para o ROADMAP.MD.
 
 ### I-07: Detecção Automática de Excedências (Over-G / ITT)
 - **Descrição:** Algoritmo que varre o CSV no carregamento e lista todos os momentos onde limites estruturais (`NZ > 4.0G`) ou térmicos (`ITT > 1000°C`) foram ultrapassados.
