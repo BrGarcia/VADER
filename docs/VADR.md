@@ -144,18 +144,30 @@ Lidos pelo programa IGS (Software EAS 440) no formato tabular ou gráfico. Depen
 * **GUN_1 / GUN_2:** Estado das metralhadoras (munição, falhas, miras, alcance) validados por GUN_1V/GUN_2V=0.
 * **MASSAS:** LOPM, LIPM, CLPM, RIPM, ROPM indicam o peso nos pilones (kg). Validado por matrizes = 3 (Ex: LOPMV=3).
 
-### Parâmetros de Motor e Combustível 
-| PARÂMETRO | DESCRIÇÃO | COMENTÁRIOS | VALIDAÇÃO |
+### Parâmetros de Motor e Combustível
+
+| PARÂMETRO | DESCRIÇÃO | FAIXA / COMENTÁRIOS | VALIDAÇÃO |
 | :--- | :--- | :--- | :--- |
-| **BLDAIR** | Ar de sangria | Nível lógico 1 (+28V) ou 0 (terra) | N/A |
-| **ENG_START** | Partida do motor | 0 (partida) / 1 (sem partida) | N/A |
-| **Q / QA / QT** | Torque (motor/exigido/sinal) | 0 a 255% | QV/QAV/QTV=3 |
-| **T1 / ITT** | Temperaturas | T1 (0 a 127°C) / ITT (0 a 2047°C) | T1V/ITTV=3 |
-| **NG / NP** | Velocidades (Ng/Np) | 0 a 255% (rpm) | NGV/NPV=3 |
-| **PCL** | Manete de Potência | -20 a +179 graus | PCLV=3 |
-| **FF / FR** | Fluxo e Combustível Restante | FF (0 a 500 kg/h) / FR (0 a 2047 kg) | FFV/FRV=3 |
-| **OT / OP** | Temperatura/Pressão Óleo | OT (-50 a 150°C) / OP (0 a 200 psi) | OTV/OPV=3 |
-| **DISD1_...** | Flags discretas (Start, Idle, Shutdown, etc.) | Provenientes da PMU (Estado 0 ou 1) | DISD1V=0 |
+| **BLDAIR** | Ar de sangria do motor | Sinal discreto: 1 = sangria ativa (+28V) / 0 = desativada (terra) | N/A |
+| **ENG_START** | Partida do motor | Sinal discreto: 0 = em partida / 1 = sem partida | N/A |
+| **Q** | Torque do motor (medido) | 0 a 255 % | QV=3 |
+| **QA** | Torque exigido (referência PMU) | 0 a 255 % | QAV=3 |
+| **QT** | Torque — sinal de controle da PMU | 0 a 255 % | QTV=3 |
+| **T1** | Temperatura da entrada do motor (T1) | 0 a 127 °C | T1V=3 |
+| **ITT** | Temperatura entre turbinas (Inter-Turbine Temperature) | 0 a 2047 °C | ITTV=3 |
+| **NG** | Velocidade do gerador de gás (Ng) | 0 a 255 % (rpm equivalente) | NGV=3 |
+| **NP** | Velocidade da hélice (Np) | 0 a 255 % (rpm equivalente) | NPV=3 |
+| **PCL** | Posição da manete de potência (Power Control Lever) | -20 a +179 graus | PCLV=3 |
+| **FF** | Fluxo de combustível (Fuel Flow) | 0 a 500 kg/h | FFV=3 |
+| **FR** | Combustível restante (Fuel Remaining) | 0 a 2047 kg | FRV=3 |
+| **OT** | Temperatura do óleo do motor (Oil Temperature) | -50 a 150 °C | OTV=3 |
+| **OP** | Pressão do óleo do motor (Oil Pressure) | 0 a 200 psi | OPV=3 |
+| **DISD1_START** | Flag discreta — partida do motor (PMU) | Estado lógico: 0 ou 1 | DISD1V=0 |
+| **DISD1_IDLE** | Flag discreta — motor em idle (PMU) | Estado lógico: 0 ou 1 | DISD1V=0 |
+| **DISD1_SHUTDOWN** | Flag discreta — desligamento do motor (PMU) | Estado lógico: 0 ou 1 | DISD1V=0 |
+| **DISD1_IGN** | Flag discreta — ignição ativa (PMU) | Estado lógico: 0 ou 1 | DISD1V=0 |
+| **DISD1_OVSP** | Flag discreta — oversped detectado (PMU) | Estado lógico: 0 ou 1 | DISD1V=0 |
+
 
 ### Parâmetros de Manutenção 
 * **CANOPY / LDG / WOW / ENGFIRE:** Sinais discretos para capota, trem de pouso, peso nas rodas e fogo no motor (N/A para matriz de validade).
@@ -167,19 +179,70 @@ Lidos pelo programa IGS (Software EAS 440) no formato tabular ou gráfico. Depen
 
 As mensagens de alerta ativadas e reportadas pelo EICAS (via parâmetro `MWC_DATA` com validação `MWCV=0`) são registradas decimalmente de 00 a 61.
 
-| Mensagem | Descrição |
-| :--- | :--- |
-| **00** | Sem mensagens de alerta. |
-| **01** | Falha nas unidades do motor, PMU (ENG_MAN). |
-| **02** | Capota de pilotagem aberta (CANOPY). |
-| **03 a 11** | (03) Sobrepressão CAB PRES, (04) Falha AP, (05) OIL PRES, (06) FUEL LVL, (07) BAT TEMP, (08) BLD LEAK, (09) CAB ALT, (10) OIL TEMP, (11) OXYGEN. |
-| **12 a 20** | Relacionados a oxigênio, trem de emergência, transferência elétrica e combustível, pinos de segurança. |
-| **23** | Combustível limite retorno base (BINGO). |
-| **24 / 60** | CHIP DET (24 Caution / 60 Warning). |
-| **32 / 33** | Gerador fora (GEN) / Pressão hidráulica baixa (HYD PRES). |
-| **Outros** | 50 (BLD OVHT), 56 (FUEL IMB), 57 (ENG LMTS). |
-
-*(A lista completa abrange de 01 a 61 detalhando todas as condições de ar, combustível, motor e elétrica indicadas no CMFD).*
+| Mensagem | Categoria | Descrição |
+| :--- | :--- | :--- |
+| **00** | — | Sem mensagens de alerta. |
+| **01** | Warning | Falha nas unidades do motor / PMU (ENG MAN). |
+| **02** | Warning | Capota de pilotagem aberta (CANOPY). |
+| **03** | Warning | Sobrepressão na cabine (CAB PRES). |
+| **04** | Warning | Falha no piloto automático (AP). |
+| **05** | Warning | Baixa/Alta pressão do óleo (OIL PRES). |
+| **06** | Warning | Baixo nível de combustível (FUEL LVL). |
+| **07** | Warning | Temperatura elevada da bateria (BAT TEMP). |
+| **08** | Warning | Vazamento no sistema de sangria de ar do motor (BLD LEAK). |
+| **09** | Warning | Altitude elevada da cabine — superior a 25000 ft (CAB ALT). |
+| **10** | Warning | Baixa/Alta temperatura do óleo (OIL TEMP). |
+| **11** | Warning | Baixa pressão de saída de oxigênio do concentrador (OXYGEN). |
+| **12** | Warning | Anormalidade no regulador de oxigênio do posto dianteiro (FWD OXY). |
+| **13** | Warning | Anormalidade no regulador de oxigênio do posto traseiro (AFT OXY). |
+| **14** | Warning | Trem de pouso recolhido quando deveria estar estendido (LDG GEAR). |
+| **15** | Warning | Fogo detectado no motor (FIRE). |
+| **16** | Caution | Baixa pressão no acumulador de emergência que alimenta o trem de pouso (EMER GEAR). |
+| **17** | Caution | Falha na transferência para a condição de emergência elétrica (ELEC XFR). |
+| **18** | Caution | Falha na transferência de combustível (FUEL XFER). |
+| **19** | Caution | Pino de segurança instalado no assento do posto dianteiro (FWD PIN). |
+| **20** | Caution | Pino de segurança instalado no assento do posto traseiro (AFT PIN). |
+| **21** | Caution | Falha no condicionamento de ar (AIR COND). |
+| **22** | Caution | Mau funcionamento de algum equipamento aviônico (AVIONICS). |
+| **23** | Caution | Combustível remanescente não é suficiente para retorno à base (BINGO). |
+| **24** | Caution | Presença de limalhas na RGB — funcionamento normal ou aeronave em solo (CHIP DET). |
+| **25** | Caution | Bateria principal sendo descarregada (BATTERY). |
+| **26** | Caution | Falha no sistema da bateria de reserva (BKUP BAT). |
+| **27** | Caution | Sobreaquecimento no compartimento eletrônico (ELEK OVH). |
+| **28** | Caution | Descompressão da cabine — limite de 16000 ft excedido (CAB ALT). |
+| **29** | Caution | Falha na compensação do piloto automático (AP MIST). |
+| **30** | Caution | A chave ARM no painel MASS/ARM do posto traseiro está na posição SAFE (ARM OFF). |
+| **31** | Caution | Barra de emergência desenergizada (EMER BUS). |
+| **32** | Caution | Gerador fora da barra (GEN). |
+| **33** | Caution | Baixa/Alta pressão hidráulica (HYD PRES). |
+| **34** | Caution | Sobrecarga na caixa de engrenagens (GB OVLD). |
+| **35** | Caution | Baixa pressão no sistema do freio de emergência (EMER BRK). |
+| **36** | Caution | Baixo nível de combustível no tanque da fuselagem (FUS LVL). |
+| **37** | Caution | Baixo nível de combustível no tanque da asa esquerda (LWING LVL). |
+| **38** | Caution | Baixo nível de combustível no tanque da asa direita (RWING LVL). |
+| **39** | Caution | Combustível desbalanceado (FUEL IMB). |
+| **40** | Caution | Passagem secundária iminente no filtro de combustível (FUEL FILT). |
+| **41** | Caution | Baixa pressão do combustível (FUEL PRES). |
+| **42** | Caution | A unidade de compensação automática do leme não está funcionando (MAN RUD T). |
+| **43** | Caution | Falha no sistema de aquecimento primário do Pitot/TAT (PITO TAT). |
+| **44** | Caution | Falha no sistema de aquecimento secundário do Pitot (S PITOT). |
+| **45** | Caution | O degelador da hélice deve ser acionado (PROP DEIC). |
+| **46** | Caution | Falha no(s) contactor(es) de partida do motor (STARTER). |
+| **47** | Caution | Aparecimento de nuvem carregada com eletricidade (STORM). |
+| **48** | Advisory | Separação inercial ativada (INERT SEP). |
+| **49** | Advisory | Interconexão com outra aeronave em execução (INTC ON). |
+| **50** | Caution | Sobreaquecimento no sistema de sangria de ar de motor (BLD OVHT). |
+| **51** | Advisory | Autoteste do OBOGS em execução (OXYBIT). |
+| **52** | Advisory | Transferência automática de combustível sobrepujada (XFER OVRD). |
+| **53** | Advisory | Válvula de isolamento dos tanques de asa totalmente fechada (WING CLOS). |
+| **54** | Advisory | Degelador da capota deve ser ativado (WS DEICE). |
+| **55** | Caution | Baixo nivel de combustível (nível combinado) — reserva. |
+| **56** | Caution | Combustível desbalanceado — segundo limiar (FUEL IMB). |
+| **57** | Warning | Limites do motor alcançados (ENG LMTS). |
+| **58** | Caution | Falha no piloto automático — modo de compensação (AP MIST). |
+| **59** | Caution | Sobreaquecimento eletrônico — segundo limiar (ELEK OVH). |
+| **60** | Warning | Presença de limalhas na AGB/RGB com funcionamento anormal do motor (CHIP DET). |
+| **61** | Warning | Limites do motor — segundo limiar (ENG LMTS). |
 
 ---
 

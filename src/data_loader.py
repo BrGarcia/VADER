@@ -57,7 +57,13 @@ class DataLoader:
         return df
 
     def _extract_metadata(self, filepath: str, max_header_rows: int = 8) -> dict[str, str]:
-        """Extrai pares chave-valor das primeiras linhas de metadados do VADR."""
+        """Extrai pares chave-valor das primeiras linhas de metadados do VADR.
+
+        S-04 (extensão): também lê as colunas de relógio interno VADR
+        (VADR_HOURS, VADR_MINUTES, VADR_SECOND, VADR_DAY, VADR_MONTH, VADR_YEAR)
+        e a hora GPS real (GMT_HOUR, GMT_MIN, GMT_SEC) do primeiro registro de dados
+        para calcular hora de início de voo e desvio de relógio.
+        """
         meta = {}
         try:
             with open(filepath, "r", encoding="utf-8", errors="replace") as fh:
@@ -71,19 +77,59 @@ class DataLoader:
                             meta[key] = val
         except Exception:
             pass
+
+        # S-04: extrai timestamps VADR / GMT do primeiro registro de dados
+        try:
+            header_row = self._strip_metadata_headers(filepath)
+            skip_rows = list(range(header_row)) + [header_row + 1]
+            import pandas as _pd
+            df_tmp = _pd.read_csv(
+                filepath, skiprows=skip_rows, header=0,
+                low_memory=False, nrows=1,
+                na_values=["", " "], keep_default_na=True,
+            )
+            df_tmp.columns = [c.strip() for c in df_tmp.columns]
+
+            # Hora interna do VADR
+            vadr_cols = ["VADR_HOURS", "VADR_MINUTES", "VADR_SECOND",
+                         "VADR_DAY", "VADR_MONTH", "VADR_YEAR"]
+            if all(c in df_tmp.columns for c in vadr_cols):
+                row = df_tmp.iloc[0]
+                h, m, s = int(row["VADR_HOURS"]), int(row["VADR_MINUTES"]), int(row["VADR_SECOND"])
+                d, mo, y = int(row["VADR_DAY"]), int(row["VADR_MONTH"]), int(row["VADR_YEAR"])
+                meta["VADR Clock (1º reg.)"] = f"{d:02d}/{mo:02d}/{y:04d} {h:02d}:{m:02d}:{s:02d}"
+
+            # Hora real GPS (GMT)
+            gmt_cols = ["GMT_HOUR", "GMT_MIN", "GMT_SEC"]
+            if all(c in df_tmp.columns for c in gmt_cols):
+                row = df_tmp.iloc[0]
+                gh, gm, gs = int(row["GMT_HOUR"]), int(row["GMT_MIN"]), int(row["GMT_SEC"])
+                meta["GPS GMT (1º reg.)"] = f"{gh:02d}:{gm:02d}:{gs:02d} UTC"
+
+                # Desvio entre relógio interno VADR e GPS real
+                if "VADR_HOURS" in df_tmp.columns:
+                    row = df_tmp.iloc[0]
+                    vadr_secs = int(row["VADR_HOURS"]) * 3600 + int(row["VADR_MINUTES"]) * 60 + int(row["VADR_SECOND"])
+                    gmt_secs  = gh * 3600 + gm * 60 + gs
+                    drift_s   = gmt_secs - vadr_secs
+                    meta["Δ Clock (GPS-VADR)"] = f"{drift_s:+d} s"
+        except Exception:
+            pass
+
         return meta
 
     def _strip_metadata_headers(self, filepath: str, max_header_rows: int = 15) -> int:
         """Detecta e retorna o índice da linha onde o cabeçalho tabular começa.
 
-        Varre até max_header_rows linhas procurando a que contém 'TIME' e 'Rec',
-        que é a linha de cabeçalho de colunas do VADR.
+        S-04: procura por 'TIME' OU 'STIME' (robusto para todos os formatos VADR),
+        dispensando a dependência de 'Rec' que nem sempre está presente.
         """
         with open(filepath, "r", encoding="utf-8", errors="replace") as fh:
             for i, line in enumerate(fh):
                 if i >= max_header_rows:
                     break
-                if "TIME" in line and "Rec" in line:
+                # Aceita TIME ou STIME como marcador de cabeçalho tabular
+                if "TIME" in line or "STIME" in line:
                     return i
         return 8  # fallback seguro para o formato VADR padrão
 
@@ -107,10 +153,11 @@ class DataLoader:
         return df
 
     def _coerce_types(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Converte colunas para numérico e aplica forward-fill nas colunas de voo.
+        """Converte colunas para numérico, aplica forward-fill e calcula coluna PHASE.
 
-        Colunas TIME_STR e TIME são preservadas; todas as demais recebem
-        pd.to_numeric(errors='coerce') para tratar valores inválidos sem falhar.
+        S-05: a coluna 'PHASE' («ground» / «flight») é derivada do sensor WOW
+        e gravada no Parquet para que TimelinePlotter.add_phase_bands() a leia
+        diretamente, sem recalcular a cada rerun do Streamlit.
         """
         protected = {"TIME", "STIME", "TIME_STR"}
 
@@ -119,11 +166,18 @@ class DataLoader:
                 continue
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
-        # Forward-fill colunas críticas: sensores atualizam em sub-taxas, gerando
-        # células vazias nas linhas intermediárias.
+        # Forward-fill colunas críticas
         cols_to_fill = [c for c in self.CORE_COLUMNS if c in df.columns]
         if cols_to_fill:
             df[cols_to_fill] = df[cols_to_fill].ffill()
+
+        # S-05: pré-computa a coluna PHASE no momento da ingestão
+        if "WOW" in df.columns:
+            df["PHASE"] = (
+                df["WOW"].astype(float).fillna(0).astype(int)
+                .map({1: "ground", 0: "flight"})
+                .fillna("flight")
+            )
 
         return df
 

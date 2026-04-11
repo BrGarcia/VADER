@@ -164,17 +164,29 @@ class TimelinePlotter:
         return fig
 
     def add_phase_bands(self, fig: go.Figure, df: pd.DataFrame) -> go.Figure:
-        """Destaca fases de voo (azul) e solo (marrom) com base no sinal WOW.
+        """Destaca fases de voo (azul) e solo (marrom) com base na coluna PHASE.
 
-        Lógica do sensor WOW (Weight on Wheels):
-            WOW == 1  →  peso nas rodas  →  SOLO   (marrom)
-            WOW == 0  →  sem peso        →  VOO    (azul)
+        S-05: a coluna PHASE é pré-computada por DataLoader._coerce_types() no
+        momento da ingestão e salva no Parquet, eliminando o recálculo a cada rerun.
+        Fallback para derivação via WOW se PHASE não estiver presente (compatibilidade).
         """
-        if "WOW" not in df.columns or "TIME" not in df.columns:
+        if "TIME" not in df.columns:
             return fig
 
-        wow_data = df[["TIME", "WOW"]].dropna(subset=["WOW"])
-        if wow_data.empty:
+        # S-05: usa coluna PHASE pré-computada; fallback para WOW se ausente
+        if "PHASE" in df.columns:
+            phases = df["PHASE"]
+            time_series = df["TIME"]
+        elif "WOW" in df.columns:
+            wow_data = df[["TIME", "WOW"]].dropna(subset=["WOW"])
+            if wow_data.empty:
+                return fig
+            phases = (
+                wow_data["WOW"].astype(float).fillna(0).astype(int)
+                .map({1: "ground", 0: "flight"})
+            )
+            time_series = wow_data["TIME"]
+        else:
             return fig
 
         _PHASE_STYLE = {
@@ -190,23 +202,19 @@ class TimelinePlotter:
             ),
         }
 
-        t_max = float(wow_data["TIME"].max())
-
-        # Vectorized run detection — avoids iterrows over every sample row
-        phases = (wow_data["WOW"].astype(float).fillna(0).astype(int) == 1).map(
-            {True: "ground", False: "flight"}
-        )
+        t_max = float(time_series.max())
         run_id = phases.ne(phases.shift()).cumsum()
-
         first_annotated: set[str] = set()
 
-        for _, group in wow_data.groupby(run_id, sort=False):
-            phase = phases.iloc[group.index[0]]
-            t_start = float(group["TIME"].iloc[0])
-            next_pos = group.index[-1] + 1
-            t_end = float(wow_data["TIME"].iloc[next_pos]) if next_pos < len(wow_data) else t_max
+        for _, group_idx in phases.groupby(run_id).groups.items():
+            group_phases = phases.loc[group_idx]
+            group_times  = time_series.loc[group_idx]
+            phase = group_phases.iloc[0]
+            t_start = float(group_times.iloc[0])
+            next_pos = group_idx[-1] + 1
+            t_end = float(time_series.iloc[next_pos]) if next_pos < len(time_series) else t_max
 
-            style = _PHASE_STYLE[phase]
+            style = _PHASE_STYLE.get(phase, _PHASE_STYLE["flight"])
             annotate = phase not in first_annotated
             kwargs: dict = dict(x0=t_start, x1=t_end, fillcolor=style["fillcolor"], line_width=0)
             if annotate:
@@ -219,6 +227,7 @@ class TimelinePlotter:
             fig.add_vrect(**kwargs)
 
         return fig
+
 
 
 # -----------------------------------------------------------------------

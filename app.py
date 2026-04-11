@@ -141,7 +141,7 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
     subsys_cards  = SubsystemCards()
     fault_columns = _LOADER.get_fault_columns(df)
 
-    # --- NOVO: Cabeçalho de Dados da Aeronave ---
+    # Cabeçalho de Dados da Aeronave
     metadata = df.attrs.get("metadata", {})
     if metadata:
         with st.container(border=True):
@@ -184,9 +184,7 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
     st.markdown("#### 🔧 Subsistemas")
     subsys_cards.render_all(snapshot)
 
-    # --- CONFIGURAÇÕES MOVIDAS PARA O FINAL ---
-    st.markdown("---")
-    render_top_menu(df)
+
 
 
 # -----------------------------------------------------------------------
@@ -202,14 +200,29 @@ def main() -> None:
         st.markdown("<p style='text-align: center; font-style: italic; color: #888; font-size: 0.9em;'>Visualizador Analítico de Dados de Engenharia e Rastreio — A-29</p>", unsafe_allow_html=True)
 
     df_cached = st.session_state.get("current_df")
-    
+
     if df_cached is not None:
-        # Se já temos dados, renderizamos o conteúdo principal (que agora inclui o menu no fim)
-        # Precisamos descobrir qual a coluna Y atual.
-        y_col = st.session_state.get("last_y_col", "BALT")
-        render_main(df_cached, y_col)
+        # Menu no topo — atualiza df e y_col (única instância, corrige B-01)
+        df, y_col = render_top_menu(df_cached)
+
+        # Se o menu carregou um arquivo diferente, atualiza o cache e reinicia
+        if df is not None and df is not df_cached:
+            st.session_state.current_df = df
+            st.rerun()
+
+        # B-02: garante que y_col é válida para o DataFrame atual
+        numeric_cols = _LOADER.get_numeric_columns(df_cached)
+        if y_col not in numeric_cols:
+            y_col = next(
+                (c for c in ("BALT", "MACH", "APA", "NZ") if c in numeric_cols),
+                numeric_cols[0] if numeric_cols else None,
+            )
+            st.session_state.last_y_col = y_col
+
+        if y_col is not None:
+            render_main(df_cached, y_col)
     else:
-        # Se não há dados, mostramos o menu no topo para permitir o primeiro upload
+        # Sem dados ainda — mostra apenas o menu de upload
         df, y_col = render_top_menu(None)
         if df is not None:
             st.session_state.current_df = df

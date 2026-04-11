@@ -9,11 +9,30 @@ Fase 3: EICASPanel (CAS window), fault markers
 
 from __future__ import annotations
 
+import json
+import os
 import streamlit as st
 import pandas as pd
 
 from src.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD, ENGINE_LIMITS, COLORS
 from .fault_panel import FaultPanel
+
+# -----------------------------------------------------------------------
+# S-02: Cache de alertas.json — carregado UMA VEZ no nível de módulo
+# -----------------------------------------------------------------------
+
+_ALERTAS_PATH = os.path.join(os.path.dirname(__file__), "alertas.json")
+try:
+    with open(_ALERTAS_PATH, "r", encoding="utf-8") as _fh:
+        _ALERT_DEFS_RAW: list[dict] = json.load(_fh)
+except Exception:
+    _ALERT_DEFS_RAW = []
+
+# Pré-ordena por prioridade (Warning > Caution > Advisory) — imutável
+_PRIORITY = {"Warning": 0, "Caution": 1, "Advisory": 2}
+_ALERT_DEFS: list[dict] = sorted(
+    _ALERT_DEFS_RAW, key=lambda x: _PRIORITY.get(x.get("categoria", ""), 3)
+)
 
 
 # -----------------------------------------------------------------------
@@ -223,56 +242,53 @@ class AttitudeBox:
             st.markdown(html_metrics, unsafe_allow_html=True)
 
         with col_horizon:
-            # Horizonte Artificial (Temporariamente Desativado)
-            # fig = self._attitude.plot(pitch, roll)
-            # st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "staticPlot": False})
+            # S-03: Toggle entre Horizonte Artificial e Painel de Alertas
+            show_attitude = st.toggle(
+                "🌐 Horizonte Artificial",
+                value=st.session_state.get("show_attitude", False),
+                key="show_attitude",
+                help="Alternar entre o Horizonte Artificial e o Painel de Alertas EICAS",
+            )
 
-            # --- Painel de Status de Alertas em Tempo Real (Carregado via JSON) ---
-            import json
-            try:
-                with open("src/ui_components/alertas.json", "r", encoding="utf-8") as f:
-                    alert_defs = json.load(f)
-            except Exception:
-                alert_defs = []
+            if show_attitude:
+                # Horizonte Artificial (S-03: restaurado via toggle)
+                fig_att = self._attitude.plot(pitch, roll)
+                st.plotly_chart(
+                    fig_att,
+                    use_container_width=True,
+                    config={"displayModeBar": False, "staticPlot": False},
+                    key="attitude_indicator",
+                )
+            else:
+                # S-02: usa _ALERT_DEFS pré-carregado no módulo (sem I/O)
+                mwc_code = int(_safe("MWC_DATA"))
+                mwc_text, _ = MWC_TRANSLATION.get(mwc_code, ("", ""))
 
-            # Ordenação por importância: Warning > Caution > Advisory
-            priority = {"Warning": 0, "Caution": 1, "Advisory": 2}
-            alert_defs.sort(key=lambda x: priority.get(x["categoria"], 3))
+                status_list = []
+                for alert in _ALERT_DEFS:
+                    is_active = False
+                    msg = alert["mensagem"]
 
-            # Mapeamento de ativação
-            mwc_code = int(_safe("MWC_DATA"))
-            mwc_text, _ = MWC_TRANSLATION.get(mwc_code, ("", ""))
+                    if msg in snapshot.index and snapshot.get(msg, 0) == 1:
+                        is_active = True
+                    elif mwc_text and msg in mwc_text:
+                        is_active = True
+                    elif msg == "ENG MAN" and mwc_code == 1:
+                        is_active = True
+                    elif msg == "ENG LMTS" and mwc_code == 57:
+                        is_active = True
+                    elif msg == "OIL PRES" and mwc_code == 5:
+                        is_active = True
+                    elif msg == "ELEK OVH" and mwc_code == 27:
+                        is_active = True
 
-            status_list = []
-            for alert in alert_defs:
-                is_active = False
-                msg = alert["mensagem"]
-                
-                # Lógica de ativação:
-                # 1. Checa se existe coluna direta com o nome da mensagem (ex: "FIRE")
-                if msg in snapshot.index and snapshot.get(msg, 0) == 1:
-                    is_active = True
-                # 2. Checa se a mensagem está contida na tradução do MWC_DATA
-                elif mwc_text and msg in mwc_text:
-                    is_active = True
-                # 3. Mapeamentos específicos para IDs conhecidos (PMU, etc)
-                elif msg == "ENG MAN" and mwc_code == 1:
-                    is_active = True
-                elif msg == "ENG LMTS" and mwc_code == 57:
-                    is_active = True
-                elif msg == "OIL PRES" and mwc_code == 5:
-                    is_active = True
-                elif msg == "ELEK OVH" and mwc_code == 27:
-                    is_active = True
-                
-                status_list.append({
-                    "name": msg,
-                    "level": alert["categoria"].upper(),
-                    "active": is_active
-                })
+                    status_list.append({
+                        "name": msg,
+                        "level": alert["categoria"].upper(),
+                        "active": is_active,
+                    })
 
-            # Renderiza o painel de alertas (que já possui seu próprio container de 320px)
-            self._fault_panel.render(status_list)
+                self._fault_panel.render(status_list)
 
         with col_engine:
             # Lógica de cor para PCL
@@ -494,7 +510,7 @@ class SubsystemCards:
 
     def render_landing_gear_card(self, ldg: int, wow: int) -> None:
         """Exibe o card do Trem de Pouso com identificação das variáveis."""
-        gear_label = "ABAIXADO ✓" if ldg == 0 else "RECOLHIDO"
+        gear_label = "ABAIXADO" if ldg == 0 else "RECOLHIDO"
         gear_color = "#00FF88" if ldg == 0 else "#FFC107"
         phase_label = "SOLO" if wow == 1 else "AR"
         phase_color = "#A07850" if wow == 1 else "#4A90D9"
@@ -502,8 +518,8 @@ class SubsystemCards:
         st.markdown(
             f"<div style='{self._CARD_BASE}'>"
             f"  <div style='font-size:0.65rem;color:#888;letter-spacing:1px;'>TREM DE POUSO</div>"
-            f"  <div style='font-size:1.1rem;font-weight:bold;color:{gear_color};'><span style='color: #888; font-size: 0.8rem;'>LDG:</span> {gear_label}</div>"
-            f"  <div style='font-size:0.9rem;font-weight:bold;color:{phase_color};margin-top:4px;'><span style='color: #888; font-size: 0.8rem;'>WOW:</span> {phase_label}</div>"
+            f"  <div style='font-size:1.0rem;font-weight:bold;color:{gear_color}; margin-top:4px;'><span style='color: #888; font-size: 0.75rem;'>LDG:</span> {gear_label}</div>"
+            f"  <div style='font-size:1.0rem;font-weight:bold;color:{phase_color}; margin-top:2px;'><span style='color: #888; font-size: 0.75rem;'>WOW:</span> {phase_label}</div>"
             f"</div>",
             unsafe_allow_html=True,
         )

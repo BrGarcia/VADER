@@ -1,0 +1,83 @@
+# Banco de Ideias — V.A.D.E.R.
+
+Este arquivo serve para registrar sugestões, melhorias e novas funcionalidades identificadas durante o desenvolvimento. As ideias aqui listadas aguardam avaliação técnica e aprovação antes de serem movidas para o `ROADMAP.MD`.
+
+---
+
+## 🛠️ Diagnóstico e Segurança
+### I-01: Monitoramento de Integridade do WOW
+- **Descrição:** Integrar a flag de falha `MW2_FWOW` no card de Trem de Pouso.
+- **Motivação:** Se o sensor de *Weight on Wheels* falhar, a indicação AR/SOLO torna-se não confiável.
+- **Visual:** Exibir um aviso discreto "⚠️ SENSOR FAIL" no card quando `MW2_FWOW == 1`.
+
+### I-04: Inferência de Transição do Trem de Pouso
+- **Descrição:** Criar uma lógica para detectar e exibir o estado "EM TRÂNSITO" do trem de pouso.
+- **Motivação:** Como o CSV não fornece uma variável de transição, podemos inferir o movimento monitorando a mudança de estado da variável `LDG`.
+- **Visual:** O rótulo mudaria para "EM TRÂNSITO..." em cor âmbar durante a mudança de estado.
+
+### I-06: Verificação de Matriz de Validade (Octal 3)
+- **Descrição:** Utilizar as colunas de validade (ex: `BALTV`, `MACHV`, `ITTV`) para validar as leituras.
+- **Motivação:** Conforme o manual `VADR.md`, um dado só é confiável se sua matriz de validade for `3`. Se for `0`, o dado é inválido.
+- **Visual:** Adicionar um indicador visual (ex: contorno tracejado ou cor cinza) quando o dado exibido estiver com flag de validade inválida no CSV.
+
+### I-07: Detecção Automática de Excedências (Over-G / ITT)
+- **Descrição:** Algoritmo que varre o CSV no carregamento e lista todos os momentos onde limites estruturais (`NZ > 4.0G`) ou térmicos (`ITT > 1000°C`) foram ultrapassados.
+- **Motivação:** Facilita o trabalho do inspetor de manutenção, que não precisa "procurar" a falha no gráfico.
+
+---
+
+## 🎨 Interface e Experiência (UX)
+### I-02: Filtro de Alertas Ativos
+- **Descrição:** Botão no `FaultPanel` para alternar entre "Ver Todos" (Ghosting) e "Apenas Ativos".
+
+### I-08: Layout "Night Vision" (NVG Mode)
+- **Descrição:** Alternar o esquema de cores para um tom verde monocromático de alta intensidade.
+- **Motivação:** Simular a operação noturna com óculos de visão noturna, comum em missões do A-29.
+
+### I-09: Marcadores de Eventos na Timeline
+- **Descrição:** Permitir que o usuário clique no gráfico e adicione uma "Nota de Manutenção" em um timestamp específico.
+- **Motivação:** Compartilhar insights entre diferentes inspetores sobre o mesmo voo.
+
+---
+
+## 📊 Analytics e Missão
+### I-03: Cálculo de Distância de Pista
+- **Descrição:** Estimar a distância percorrida no solo durante a corrida de decolagem/pouso.
+
+### I-05: Monitoramento de Trajetória (Mapa GPS)
+- **Descrição:** Plotar `GPSLAT` e `GPSLONG` em um mapa interativo sincronizado.
+
+### I-10: Painel de Armamento (Store Management)
+- **Descrição:** Visualização gráfica dos 5 pilones (`PY1` a `PY5`) mostrando o tipo de carga e peso remanescente.
+- **Motivação:** Útil para debriefing de missões de ataque, correlacionando o disparo (`CUR_WPN_TRIG`) com a mudança de massa nos pilones.
+
+### I-11: Contador de Ciclos do Motor
+- **Descrição:** Implementar a lógica de contagem de ciclos (LCF - Low Cycle Fatigue) baseada nas variações de Ng e ITT conforme definido nos manuais de manutenção.
+- **Motivação:** Automatizar o cálculo de vida fadigável do motor a partir da telemetria bruta.
+
+---
+
+## 📂 Dados e Performance
+### I-12: Verificação de Integridade (MD5/SHA)
+- **Descrição:** Gerar e verificar hashes dos arquivos CSV carregados.
+- **Motivação:** Garantir que a telemetria não foi alterada maliciosamente entre o descarregamento da aeronave e a análise no V.A.D.E.R.
+
+### I-13: Exportação de Relatório de Manutenção (PDF)
+- **Descrição:** Botão para gerar um PDF consolidado com metadados da ANV, lista de falhas detectadas e estatísticas de uso (Tempo de voo, G máximo, ITT máximo).
+
+## ⚡ Produtividade e Auditoria Rápida
+### I-14: Smart Audit (Verificação de Excedência Direta)
+- **Descrição:** Uma nova seção na Landing Page que permite ao usuário carregar um CSV e definir filtros específicos (ex: "NZ > 5.0" ou "ITT > 1050") antes de entrar na análise completa.
+- **Motivação:** Economizar tempo quando o objetivo é apenas validar se um limite técnico foi violado.
+- **Funcionalidade:** O sistema processa o arquivo, localiza os exatos timestamps que satisfazem a condição e gera um gráfico simplificado focando apenas nesses eventos, ignorando o restante dos dados irrelevantes.
+
+---
+
+## 📟 Instrumentos e Displays
+
+### I-15 (ex S-07): Integração do VSI — Velocidade Vertical
+- **Descrição:** Integrar o componente `vsi.py` (classe `VerticalSpeedIndicator`, já implementado e funcional) ao `AttitudeBox`, exibindo o indicador de velocidade vertical no painel de voo.
+- **Motivação:** O componente está pronto e testado (possui até um modo demo standalone). A variável `ALTR` (taxa de altitude, ft/min) já é gravada pelo VADR e coberta pelo dicionário de dados.
+- **Implementação sugerida:** Adicionar um quinto card no `SubsystemCards`, ou incluir o gauge VSI na coluna de dados de voo do `AttitudeBox` abaixo do AOA.
+- **Referência:** `src/ui_components/vsi.py` — classe `VerticalSpeedIndicator`, faixa -3000 a +3000 ft/min.
+
