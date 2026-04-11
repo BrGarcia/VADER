@@ -208,15 +208,15 @@ class AttitudeBox:
             nz_color = COLORS["warning"] if abs(nz) > NZ_ALERT_THRESHOLD else "#00FF88"
             html_metrics = (
                 f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3; height: 320px; display: flex; flex-direction: column; justify-content: center;">'
-                f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ALT (ft)</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold; color:#00FF88;">{altitude:,.0f}</div>'
-                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">MACH</div>'
+                f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ALTITUDE (BALT)</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:#00FF88;">{altitude:,.0f} ft</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">VELOCIDADE (MACH)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:#00FF88;">{speed:.3f}</div>'
-                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">PITCH / ROLL</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ATITUDE (APA/ARA)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:#FFC107;">{pitch:+.1f}°/{roll:+.1f}°</div>'
-                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">NZ (G)</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">CARGA (NZ)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:{nz_color};">{nz:+.2f}G</div>'
-                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">AOA</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ATAQUE (AOA)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:#FAFAFA;">{aoa:.1f}°</div>'
                 f'</div>'
             )
@@ -493,15 +493,7 @@ class SubsystemCards:
             self._render_pcl_card(_safe("PCL"))
 
     def render_landing_gear_card(self, ldg: int, wow: int) -> None:
-        """Exibe o card do Trem de Pouso.
-
-        Lógica LDG (invertida conforme dicionário de dados):
-            LDG == 0  →  Abaixado / Travado  (verde)
-            LDG == 1  →  Recolhido           (amarelo)
-        Lógica WOW:
-            WOW == 1  →  Solo
-            WOW == 0  →  Ar
-        """
+        """Exibe o card do Trem de Pouso com identificação das variáveis."""
         gear_label = "ABAIXADO ✓" if ldg == 0 else "RECOLHIDO"
         gear_color = "#00FF88" if ldg == 0 else "#FFC107"
         phase_label = "SOLO" if wow == 1 else "AR"
@@ -510,8 +502,8 @@ class SubsystemCards:
         st.markdown(
             f"<div style='{self._CARD_BASE}'>"
             f"  <div style='font-size:0.65rem;color:#888;letter-spacing:1px;'>TREM DE POUSO</div>"
-            f"  <div style='font-size:1.1rem;font-weight:bold;color:{gear_color};'>{gear_label}</div>"
-            f"  <div style='font-size:0.75rem;font-weight:bold;color:{phase_color};margin-top:4px;'>{phase_label}</div>"
+            f"  <div style='font-size:1.1rem;font-weight:bold;color:{gear_color};'><span style='color: #888; font-size: 0.8rem;'>LDG:</span> {gear_label}</div>"
+            f"  <div style='font-size:0.9rem;font-weight:bold;color:{phase_color};margin-top:4px;'><span style='color: #888; font-size: 0.8rem;'>WOW:</span> {phase_label}</div>"
             f"</div>",
             unsafe_allow_html=True,
         )
