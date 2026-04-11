@@ -141,6 +141,16 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
     subsys_cards  = SubsystemCards()
     fault_columns = _LOADER.get_fault_columns(df)
 
+    # --- NOVO: Cabeçalho de Dados da Aeronave ---
+    metadata = df.attrs.get("metadata", {})
+    if metadata:
+        with st.container(border=True):
+            st.markdown("<p style='font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; text-align: center;'>✈️ DADOS DA AERONAVE</p>", unsafe_allow_html=True)
+            cols_meta = st.columns(len(metadata) if len(metadata) > 0 else 1)
+            for i, (key, val) in enumerate(metadata.items()):
+                with cols_meta[i % len(cols_meta)]:
+                    st.markdown(f"<p style='font-size: 0.75rem; text-align: center;'><span style='color: #888;'>{key}:</span> <br><b>{val}</b></p>", unsafe_allow_html=True)
+
     time_idx = int(st.session_state.get(TimeController.SESSION_KEY, 0))
     snapshot = controller.get_snapshot(time_idx)
 
@@ -174,6 +184,10 @@ def render_main(df: pd.DataFrame, y_col: str) -> None:
     st.markdown("#### 🔧 Subsistemas")
     subsys_cards.render_all(snapshot)
 
+    # --- CONFIGURAÇÕES MOVIDAS PARA O FINAL ---
+    st.markdown("---")
+    render_top_menu(df)
+
 
 # -----------------------------------------------------------------------
 # Entrypoint
@@ -188,13 +202,19 @@ def main() -> None:
         st.markdown("<p style='text-align: center; font-style: italic; color: #888; font-size: 0.9em;'>Visualizador Analítico de Dados de Engenharia e Rastreio — A-29</p>", unsafe_allow_html=True)
 
     df_cached = st.session_state.get("current_df")
-    df, y_col = render_top_menu(df_cached)
-
-    if df is not None:
-        st.session_state.current_df = df
-        render_main(df, y_col)
+    
+    if df_cached is not None:
+        # Se já temos dados, renderizamos o conteúdo principal (que agora inclui o menu no fim)
+        # Precisamos descobrir qual a coluna Y atual.
+        y_col = st.session_state.get("last_y_col", "BALT")
+        render_main(df_cached, y_col)
     else:
-        st.info("📂 Configure o arquivo de voo no menu superior para iniciar a análise.")
+        # Se não há dados, mostramos o menu no topo para permitir o primeiro upload
+        df, y_col = render_top_menu(None)
+        if df is not None:
+            st.session_state.current_df = df
+            st.rerun()
+        st.info("📂 Configure o arquivo de voo no menu acima para iniciar a análise.")
 
 
 if __name__ == "__main__":

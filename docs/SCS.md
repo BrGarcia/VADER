@@ -58,17 +58,21 @@ O VADER será uma aplicação independente (standalone) baseada em scripts Pytho
 * **RF04.3:** O sistema deve exibir o status do Motor (ex: Temperatura ITT, Fluxo de Combustível `FF`).
 * **RF04.4:** O sistema deve exibir indicadores de Carga Dinâmica/Estrutural (ex: Força G no eixo Z - `NZ`), alertando visualmente para picos de aceleração.
 
-### RF05: Sincronização de Contexto (Global)
-* **RF05.1:** O sistema deve possuir um mecanismo de controle temporal (ex: slider ou cursor interativo no gráfico central).
-* **RF05.2:** Ao mover o controle temporal, os RF02 (Atitude) e RF04 (Subsistemas) devem ser atualizados instantaneamente para refletir o valor exato no *timestamp* selecionado.
+### RF05: Sincronização e Controle de Fluxo
+* **RF05.1:** O sistema deve possuir um mecanismo de controle temporal sincronizado (Slider) e um botão de reprodução automática (Play/Pause) para simulação de voo.
+* **RF05.2:** O sistema deve manter um histórico de arquivos CSV carregados para troca rápida de contexto sem necessidade de novo upload.
+
+### RF06: Módulo de Monitoramento de Alertas (Experimental)
+* **RF06.1:** O sistema deve exibir um painel de alertas centralizado capaz de monitorar falhas críticas permanentemente.
+* **RF06.2:** O painel deve utilizar efeito de "Ghosting" para alertas inativos (borda colorida, fundo preto) e preenchimento total para alertas ativos.
 
 ---
 
 ## 4. Requisitos de Interface do Usuário (UI)
 
-* **UI01 - Layout em Grid:** A interface deve utilizar 100% da largura útil da tela (*wide layout*), dividida horizontalmente nos três blocos principais definidos nos RFs.
-* **UI02 - Acessibilidade Visual:** O gráfico temporal deve possuir contraste adequado (fundo limpo/branco ou dark mode nativo) para facilitar a visualização das curvas de dados.
-* **UI03 - Responsividade Otimizada:** Embora voltado para uso em monitores desktop de oficina ou bancada, os "cards" do Box Inferior devem quebrar a linha automaticamente se a janela for redimensionada.
+* **UI01 - Layout em Grid Wide:** A interface utiliza 100% da largura útil, com menu de configurações fixo no topo e divisão em três blocos superiores de 320px de altura.
+* **UI02 - Landing Page:** A página inicial deve apresentar identidade visual centralizada, destacando a aeronave de referência e o título do projeto.
+* **UI03 - Menu Superior Ultracompacto:** Os controles de arquivo e variáveis devem ocupar o mínimo de espaço vertical possível para priorizar a área de visualização de dados.
 
 ---
 

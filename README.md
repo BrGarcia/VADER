@@ -26,21 +26,21 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Acesse `http://localhost:8501` no navegador. Carregue um arquivo `.csv` exportado pelo VADR na barra lateral.
+Acesse `http://localhost:8501` no navegador. Configure o arquivo no menu superior horizontal.
 
 ---
 
-## Funcionalidades
+## Funcionalidades Principais
 
 | Módulo | Descrição |
 |--------|-----------|
-| **Ingestão CSV → Parquet** | Detecta e pula os 7 cabeçalhos de metadados do VADR; converte para Parquet (Snappy) em `data/processed/`; reprocessa apenas se o CSV tiver sido modificado |
-| **Linha do Tempo** | Gráfico interativo (zoom/pan) de qualquer variável numérica; bandas coloridas de voo (azul) e solo (marrom); marcadores de falha MW* sobre a curva |
-| **Horizonte Artificial** | Instrumento de atitude com pitch, roll, escada de referência e ponteiro dinâmico de bank |
-| **Gauges do Motor (EICAS)** | 7 instrumentos: Torque, ITT, Np, Ng, Fuel Flow, Oil Temp, Oil Press — com zonas de cor e needle dinâmico |
-| **Janela CAS** | Lê `MWC_DATA` e flags `MW1_*/MW2_*/MW3_*`; exibe WARNINGS (vermelho) acima de CAUTIONS (amarelo); "VOO NORMAL" quando limpo |
-| **Cards de Subsistemas** | Trem de pouso (lógica invertida LDG), carga estrutural (alerta NZ > 4G), resumo de motor, posição PCL |
-| **Time Scrubbing** | Slider temporal sincroniza todos os painéis instantaneamente |
+| **Ingestão CSV → Parquet** | Detecta e pula os metadados do VADR; converte para Parquet (Snappy) para performance; reprocessa apenas se o arquivo for alterado. |
+| **Linha do Tempo** | Gráfico interativo (zoom/pan) de qualquer variável numérica; bandas coloridas de voo (azul) e solo (marrom); marcadores de falha MW* integrados. |
+| **Painel de Alertas** | Exibição em tempo real de falhas críticas (ENG FIRE, OIL PRESS, etc.) com efeito *ghosting* para sistemas inativos e destaque total para alertas ativos. |
+| **Horizonte Artificial** | Instrumento de atitude dinâmico com pitch, roll, escada de referência e ponteiro de bank (alternável com o Painel de Alertas). |
+| **Gauges do Motor (EICAS)** | 7 instrumentos técnicos: Torque, ITT, Np, Ng, Fuel Flow, Oil Temp, Oil Press — com zonas de cor e needle dinâmico. |
+| **Cards de Subsistemas** | Monitoramento rápido de Trem de Pouso, Carga Estrutural (G-load), Resumo do Motor e Posição da Manete (PCL). |
+| **Playback & Scrubbing** | Controle de Play/Pause (20 FPS) e slider temporal para sincronização instantânea de todos os instrumentos. |
 
 ---
 
@@ -48,39 +48,21 @@ Acesse `http://localhost:8501` no navegador. Carregue um arquivo `.csv` exportad
 
 ```
 vader/
-├── app.py                  # Ponto de entrada — layout e orquestração Streamlit
-├── requirements.txt        # Dependências Python
+├── app.py                  # Ponto de entrada — layout centralizado e landing page
+├── requirements.txt        # Dependências do projeto
 ├── .gitignore
 │
 ├── src/
-│   ├── data_loader.py      # Ingestão CSV → Parquet, DataLoader
-│   ├── plots.py            # TimelinePlotter, AttitudeIndicator, EngineGaugePlotter
-│   └── ui_components.py    # EICASPanel, SubsystemCards, AttitudeBox, TimeController
+│   ├── data_loader.py      # Pipeline de processamento de dados (Pandas/PyArrow)
+│   ├── plots.py            # Motores gráficos Plotly (Timeline, Horizon, Gauges)
+│   └── ui_components/      # Pacote de componentes Streamlit
+│       ├── __init__.py     # AttitudeBox, TimeController, EICAS
+│       └── fault_panel.py  # Grid dinâmico de alertas
 │
-├── data/                   # Ignorado pelo Git
-│   ├── raw/                # CSVs originais do VADR
-│   └── processed/          # Cache .parquet gerado automaticamente
-│
-├── assets/                 # Imagens estáticas (perfis da aeronave)
-│
-└── docs/                   # Documentação técnica
-    ├── ROADMAP.md
-    ├── SCS.md
-    ├── Dicionario_de_Dados_VADER.md
-    ├── Guia_UI_EICAS.md
-    └── CONTRIBUTING.md
+├── data/                   # Diretório de dados (raw e processed)
+├── assets/                 # Imagens e perfis técnicos da aeronave
+└── docs/                   # Documentação técnica detalhada
 ```
-
----
-
-## Tecnologias
-
-| Biblioteca | Uso |
-|------------|-----|
-| `streamlit >= 1.32` | Interface web e widgets |
-| `pandas >= 2.0` | Manipulação de dados, forward-fill |
-| `plotly >= 5.20` | Gráficos interativos e gauges |
-| `pyarrow >= 15.0` | Cache Parquet com compressão Snappy |
 
 ---
 
@@ -89,10 +71,9 @@ vader/
 | Documento | Conteúdo |
 |-----------|----------|
 | `docs/SCS.md` | Especificação completa de requisitos (RF, UI, RNF) |
-| `docs/Dicionario_de_Dados_VADER.md` | Mapeamento de variáveis CSV, ranges e lógica de tratamento por fase |
-| `docs/Guia_UI_EICAS.md` | Diretrizes de UX, cores, thresholds e comportamento do painel EICAS |
-| `docs/CONTRIBUTING.md` | Padrões de contribuição e workflow de desenvolvimento |
-| `docs/ROADMAP.md` | Histórico de fases e entregas |
+| `docs/Dicionario_de_Dados_VADER.md` | Mapeamento de variáveis, ranges e lógica de tratamento |
+| `docs/ROADMAP.md` | Histórico de desenvolvimento e metas futuras |
+| `10ABR.MD` | Resumo detalhado das implementações de hoje |
 
 ---
 

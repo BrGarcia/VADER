@@ -35,22 +35,43 @@ class DataLoader:
     # ------------------------------------------------------------------
 
     def ingest(self, filepath: str) -> pd.DataFrame:
-        """Pipeline principal: lê CSV, limpa e converte para Parquet se necessário.
+        """Pipeline principal: lê CSV, extrai metadados, limpa e converte para Parquet se necessário.
 
         Retorna o DataFrame processado pronto para uso na UI.
         """
         parquet_path = self._get_parquet_path(filepath)
+        metadata = self._extract_metadata(filepath)
 
         if self._parquet_is_fresh(filepath, parquet_path):
-            return self.load_parquet(parquet_path)
+            df = self.load_parquet(parquet_path)
+            df.attrs["metadata"] = metadata
+            return df
 
         df = self._read_raw_csv(filepath)
         df = self._resolve_time_column(df)
         df = self._coerce_types(df)
         df = df.reset_index(drop=True)
+        df.attrs["metadata"] = metadata
 
         self.convert_to_parquet(df, parquet_path)
         return df
+
+    def _extract_metadata(self, filepath: str, max_header_rows: int = 8) -> dict[str, str]:
+        """Extrai pares chave-valor das primeiras linhas de metadados do VADR."""
+        meta = {}
+        try:
+            with open(filepath, "r", encoding="utf-8", errors="replace") as fh:
+                for i, line in enumerate(fh):
+                    if i >= max_header_rows: break
+                    if "," in line:
+                        parts = line.split(",", 1)
+                        key = parts[0].strip()
+                        val = parts[1].strip()
+                        if key and val and "TIME" not in key:
+                            meta[key] = val
+        except Exception:
+            pass
+        return meta
 
     def _strip_metadata_headers(self, filepath: str, max_header_rows: int = 15) -> int:
         """Detecta e retorna o índice da linha onde o cabeçalho tabular começa.

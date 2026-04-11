@@ -1,0 +1,272 @@
+[
+  {
+    "mensagem": "AP",
+    "categoria": "Warning",
+    "explicacao": "Falha no piloto automático"
+  },
+  {
+    "mensagem": "BAT TEMP",
+    "categoria": "Warning",
+    "explicacao": "Temperatura elevada da bateria"
+  },
+  {
+    "mensagem": "BLD LEAK",
+    "categoria": "Warning",
+    "explicacao": "Vazamento no sistema de sangria de ar do motor"
+  },
+  {
+    "mensagem": "CAB ALT",
+    "categoria": "Warning",
+    "explicacao": "Altitude elevada da cabine (maior do que 25000ft)"
+  },
+  {
+    "mensagem": "CAB PRES",
+    "categoria": "Warning",
+    "explicacao": "Sobrepressão na cabine"
+  },
+  {
+    "mensagem": "CANOPY",
+    "categoria": "Warning",
+    "explicacao": "Capota aberta"
+  },
+  {
+    "mensagem": "CHIP DET",
+    "categoria": "Warning",
+    "explicacao": "Presença de limalhas na AGB (Caixa de Acessórios) e na RGB (Caixa de Redução), ou funcionamento anormal do motor com detecção de limalhas ou na AGB ou na RGB."
+  },
+  {
+    "mensagem": "ENG MAN",
+    "categoria": "Warning",
+    "explicacao": "Falha na PMU"
+  },
+  {
+    "mensagem": "ENG LMTS",
+    "categoria": "Warning",
+    "explicacao": "Limites do motor alcançados"
+  },
+  {
+    "mensagem": "FIRE",
+    "categoria": "Warning",
+    "explicacao": "Fogo detectado no motor"
+  },
+  {
+    "mensagem": "FUEL FUS",
+    "categoria": "Warning",
+    "explicacao": "Bomba do tanque da fuselagem inoperante e baixo nível de combustível nos tanques das asas"
+  },
+  {
+    "mensagem": "FUEL LVL",
+    "categoria": "Warning",
+    "explicacao": "Baixo nível de combustível"
+  },
+  {
+    "mensagem": "FWD OXY",
+    "categoria": "Warning",
+    "explicacao": "Anormalidade no regulador de oxigênio"
+  },
+  {
+    "mensagem": "LDG GEAR",
+    "categoria": "Warning",
+    "explicacao": "Trem de pouso recolhido, quando deveria estar estendido"
+  },
+  {
+    "mensagem": "OIL PRES",
+    "categoria": "Warning",
+    "explicacao": "Baixa/Alta pressão do óleo"
+  },
+  {
+    "mensagem": "OIL TEMP",
+    "categoria": "Warning",
+    "explicacao": "Baixa/Alta temperatura do óleo"
+  },
+  {
+    "mensagem": "OXYGEN",
+    "categoria": "Warning",
+    "explicacao": "Baixa pressão de saída de oxigênio do concentrador"
+  },
+  {
+    "mensagem": "AIR COND",
+    "categoria": "Caution",
+    "explicacao": "Falha no condicionamento de ar"
+  },
+  {
+    "mensagem": "AP MIST",
+    "categoria": "Caution",
+    "explicacao": "Falha na compensação do piloto automático"
+  },
+  {
+    "mensagem": "AVIONICS",
+    "categoria": "Caution",
+    "explicacao": "Mau funcionamento de algum equipamento aviônico"
+  },
+  {
+    "mensagem": "BATTERY",
+    "categoria": "Caution",
+    "explicacao": "Bateria principal sendo descarregada"
+  },
+  {
+    "mensagem": "BINGO",
+    "categoria": "Caution",
+    "explicacao": "Combustível remanescente não é suficiente para retorno à base"
+  },
+  {
+    "mensagem": "BKUP BAT",
+    "categoria": "Caution",
+    "explicacao": "Falha no sistema da bateria de reserva"
+  },
+  {
+    "mensagem": "BLD OVHT",
+    "categoria": "Caution",
+    "explicacao": "Sobreaquecimento no sistema de sangria de ar do motor"
+  },
+  {
+    "mensagem": "CAB ALT",
+    "categoria": "Caution",
+    "explicacao": "Descompressão da cabine (limite de 16000ft excedido)"
+  },
+  {
+    "mensagem": "CHIP DET",
+    "categoria": "Caution",
+    "explicacao": "Presença de limalhas na RGB com funcionamento normal do motor; ou detecção de limalhas na AGB ou na RGB com funcionamento do motor e aeronave em solo"
+  },
+  {
+    "mensagem": "ELEC XFR",
+    "categoria": "Caution",
+    "explicacao": "Falha na transferência para a condição de emergência elétrica"
+  },
+  {
+    "mensagem": "ELEK OVH",
+    "categoria": "Caution",
+    "explicacao": "Sobreaquecimento no compartimento eletrônico"
+  },
+  {
+    "mensagem": "EMER BRK",
+    "categoria": "Caution",
+    "explicacao": "Baixa pressão no sistema do freio de emergência"
+  },
+  {
+    "mensagem": "EMER BUS",
+    "categoria": "Caution",
+    "explicacao": "Barra de emergência desenergizada"
+  },
+  {
+    "mensagem": "EMER GEAR",
+    "categoria": "Caution",
+    "explicacao": "Baixa pressão no acumulador de emergência que alimenta o trem de pouso"
+  },
+  {
+    "mensagem": "FUEL IMB",
+    "categoria": "Caution",
+    "explicacao": "Combustível desbalanceado"
+  },
+  {
+    "mensagem": "FUEL XFER",
+    "categoria": "Caution",
+    "explicacao": "Falha na transferência de combustível"
+  },
+  {
+    "mensagem": "FUEL FILT",
+    "categoria": "Caution",
+    "explicacao": "Passagem secundária iminente no filtro de combustível"
+  },
+  {
+    "mensagem": "FUEL PRES",
+    "categoria": "Caution",
+    "explicacao": "Baixa pressão do combustível"
+  },
+  {
+    "mensagem": "FUS LVL",
+    "categoria": "Caution",
+    "explicacao": "Baixo nível de combustível no tanque da fuselagem"
+  },
+  {
+    "mensagem": "FWD PIN",
+    "categoria": "Caution",
+    "explicacao": "Pino de segurança instalado no assento"
+  },
+  {
+    "mensagem": "GB OVLD",
+    "categoria": "Caution",
+    "explicacao": "Sobrecarga na caixa de engrenagens"
+  },
+  {
+    "mensagem": "GEN",
+    "categoria": "Caution",
+    "explicacao": "Gerador fora da barra"
+  },
+  {
+    "mensagem": "HYD PRES",
+    "categoria": "Caution",
+    "explicacao": "Baixa/Alta pressão hidráulica"
+  },
+  {
+    "mensagem": "LWING LVL",
+    "categoria": "Caution",
+    "explicacao": "Baixo nível de combustível no tanque da asa esquerda"
+  },
+  {
+    "mensagem": "MAN RUD T",
+    "categoria": "Caution",
+    "explicacao": "A unidade de compensação automática do leme não está funcionando ou está com falha"
+  },
+  {
+    "mensagem": "PITO TAT",
+    "categoria": "Caution",
+    "explicacao": "Falha no sistema de aquecimento primário do Pitot/TAT"
+  },
+  {
+    "mensagem": "PROP DEIC",
+    "categoria": "Caution",
+    "explicacao": "O degelador da hélice deve ser acionado"
+  },
+  {
+    "mensagem": "RWING LVL",
+    "categoria": "Caution",
+    "explicacao": "Baixo nível de combustível no tanque da asa direita"
+  },
+  {
+    "mensagem": "S PITOT",
+    "categoria": "Caution",
+    "explicacao": "Falha no sistema de aquecimento secundário do Pitot"
+  },
+  {
+    "mensagem": "STARTER",
+    "categoria": "Caution",
+    "explicacao": "Falha no(s) contactor(es) de partida do motor"
+  },
+  {
+    "mensagem": "STORM",
+    "categoria": "Caution",
+    "explicacao": "Aparecimento de nuvem carregada com eletricidade"
+  },
+  {
+    "mensagem": "INERT SEP",
+    "categoria": "Advisory",
+    "explicacao": "Separação inercial ativada"
+  },
+  {
+    "mensagem": "INTC ON",
+    "categoria": "Advisory",
+    "explicacao": "Interconexão com outra aeronave em execução"
+  },
+  {
+    "mensagem": "OXYBIT",
+    "categoria": "Advisory",
+    "explicacao": "Autoteste do OBOGS (Sistema de Geração de Oxigênio) em execução"
+  },
+  {
+    "mensagem": "XFER OVRD",
+    "categoria": "Advisory",
+    "explicacao": "Transferência automática de combustível sobrepujada"
+  },
+  {
+    "mensagem": "WING CLOS",
+    "categoria": "Advisory",
+    "explicacao": "Válvula de isolamento dos tanques de asa totalmente fechada"
+  },
+  {
+    "mensagem": "WS DEICE",
+    "categoria": "Advisory",
+    "explicacao": "Degelador da capota deve ser ativado"
+  }
+]

@@ -13,7 +13,7 @@ import streamlit as st
 import pandas as pd
 
 from src.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD, ENGINE_LIMITS, COLORS
-from src.ui_components.fault_panel import FaultPanel
+from .fault_panel import FaultPanel
 
 
 # -----------------------------------------------------------------------
@@ -227,30 +227,52 @@ class AttitudeBox:
             # fig = self._attitude.plot(pitch, roll)
             # st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "staticPlot": False})
 
-            # Painel de Alertas (Fase 3 - Experimental)
-            active_faults = []
-            if fault_columns:
-                for col in fault_columns:
-                    if snapshot.get(col, 0) == 1:
-                        desc, sev = FAULT_DESCRIPTIONS.get(col, (col, "caution"))
-                        active_faults.append({"name": desc, "level": sev.upper()})
-            
-            # Adiciona MWC_DATA se houver
-            mwc_code = int(_safe("MWC_DATA"))
-            if mwc_code in MWC_TRANSLATION:
-                mwc_text, mwc_sev = MWC_TRANSLATION[mwc_code]
-                if mwc_text:
-                    active_faults.insert(0, {"name": mwc_text, "level": mwc_sev.upper()})
+            # --- Painel de Status de Alertas em Tempo Real (Carregado via JSON) ---
+            import json
+            try:
+                with open("src/ui_components/alertas.json", "r", encoding="utf-8") as f:
+                    alert_defs = json.load(f)
+            except Exception:
+                alert_defs = []
 
-            if active_faults:
-                self._fault_panel.render(active_faults)
-            else:
-                st.markdown(
-                    '<div style="height: 320px; display: flex; align-items: center; justify-content: center; border: 1px solid #2D2D2D; border-radius: 8px; color: #444; font-family: monospace;">'
-                    'SISTEMAS O.K.'
-                    '</div>',
-                    unsafe_allow_html=True
-                )
+            # Ordenação por importância: Warning > Caution > Advisory
+            priority = {"Warning": 0, "Caution": 1, "Advisory": 2}
+            alert_defs.sort(key=lambda x: priority.get(x["categoria"], 3))
+
+            # Mapeamento de ativação
+            mwc_code = int(_safe("MWC_DATA"))
+            mwc_text, _ = MWC_TRANSLATION.get(mwc_code, ("", ""))
+
+            status_list = []
+            for alert in alert_defs:
+                is_active = False
+                msg = alert["mensagem"]
+                
+                # Lógica de ativação:
+                # 1. Checa se existe coluna direta com o nome da mensagem (ex: "FIRE")
+                if msg in snapshot.index and snapshot.get(msg, 0) == 1:
+                    is_active = True
+                # 2. Checa se a mensagem está contida na tradução do MWC_DATA
+                elif mwc_text and msg in mwc_text:
+                    is_active = True
+                # 3. Mapeamentos específicos para IDs conhecidos (PMU, etc)
+                elif msg == "ENG MAN" and mwc_code == 1:
+                    is_active = True
+                elif msg == "ENG LMTS" and mwc_code == 57:
+                    is_active = True
+                elif msg == "OIL PRES" and mwc_code == 5:
+                    is_active = True
+                elif msg == "ELEK OVH" and mwc_code == 27:
+                    is_active = True
+                
+                status_list.append({
+                    "name": msg,
+                    "level": alert["categoria"].upper(),
+                    "active": is_active
+                })
+
+            # Renderiza o painel de alertas (que já possui seu próprio container de 320px)
+            self._fault_panel.render(status_list)
 
         with col_engine:
             # Lógica de cor para PCL
@@ -439,7 +461,9 @@ class SubsystemCards:
 
     _CARD_BASE = (
         "background:#0E1117; border:1px solid #2D2D2D; border-radius:8px; "
-        "padding:12px; text-align:center; font-family:monospace;"
+        "padding:12px; text-align:center; font-family:monospace; "
+        "height:130px; display:flex; flex-direction:column; justify-content:center; "
+        "box-sizing:border-box;"
     )
 
     def render_all(self, snapshot: pd.Series) -> None:
