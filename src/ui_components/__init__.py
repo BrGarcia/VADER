@@ -242,53 +242,38 @@ class AttitudeBox:
             st.markdown(html_metrics, unsafe_allow_html=True)
 
         with col_horizon:
-            # S-03: Toggle entre Horizonte Artificial e Painel de Alertas
-            show_attitude = st.toggle(
-                "🌐 Horizonte Artificial",
-                value=st.session_state.get("show_attitude", False),
-                key="show_attitude",
-                help="Alternar entre o Horizonte Artificial e o Painel de Alertas EICAS",
-            )
+            # ── Painel de Alertas EICAS (FaultPanel) ──
+            # NOTA: self._attitude (AttitudeIndicator) está preservado para uso futuro
+            # no bloco de Análise de Atitude + Geolocalização (Google Maps API).
+            # O toggle 🌐 Horizonte Artificial foi removido desta tela — S-03 suspensa.
+            mwc_code = int(_safe("MWC_DATA"))
+            mwc_text, _ = MWC_TRANSLATION.get(mwc_code, ("", ""))
 
-            if show_attitude:
-                # Horizonte Artificial (S-03: restaurado via toggle)
-                fig_att = self._attitude.plot(pitch, roll)
-                st.plotly_chart(
-                    fig_att,
-                    use_container_width=True,
-                    config={"displayModeBar": False, "staticPlot": False},
-                    key="attitude_indicator",
-                )
-            else:
-                # S-02: usa _ALERT_DEFS pré-carregado no módulo (sem I/O)
-                mwc_code = int(_safe("MWC_DATA"))
-                mwc_text, _ = MWC_TRANSLATION.get(mwc_code, ("", ""))
+            status_list = []
+            for alert in _ALERT_DEFS:
+                is_active = False
+                msg = alert["mensagem"]
 
-                status_list = []
-                for alert in _ALERT_DEFS:
-                    is_active = False
-                    msg = alert["mensagem"]
+                if msg in snapshot.index and snapshot.get(msg, 0) == 1:
+                    is_active = True
+                elif mwc_text and msg in mwc_text:
+                    is_active = True
+                elif msg == "ENG MAN" and mwc_code == 1:
+                    is_active = True
+                elif msg == "ENG LMTS" and mwc_code == 57:
+                    is_active = True
+                elif msg == "OIL PRES" and mwc_code == 5:
+                    is_active = True
+                elif msg == "ELEK OVH" and mwc_code == 27:
+                    is_active = True
 
-                    if msg in snapshot.index and snapshot.get(msg, 0) == 1:
-                        is_active = True
-                    elif mwc_text and msg in mwc_text:
-                        is_active = True
-                    elif msg == "ENG MAN" and mwc_code == 1:
-                        is_active = True
-                    elif msg == "ENG LMTS" and mwc_code == 57:
-                        is_active = True
-                    elif msg == "OIL PRES" and mwc_code == 5:
-                        is_active = True
-                    elif msg == "ELEK OVH" and mwc_code == 27:
-                        is_active = True
+                status_list.append({
+                    "name": msg,
+                    "level": alert["categoria"].upper(),
+                    "active": is_active,
+                })
 
-                    status_list.append({
-                        "name": msg,
-                        "level": alert["categoria"].upper(),
-                        "active": is_active,
-                    })
-
-                self._fault_panel.render(status_list)
+            self._fault_panel.render(status_list)
 
         with col_engine:
             # Lógica de cor para PCL

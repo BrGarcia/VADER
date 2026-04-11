@@ -78,6 +78,7 @@ Esta seção documenta problemas identificados durante a inspeção do código a
 | B-04 | `ui_components/__init__.py` | ~~Horizonte artificial comentado sem rota alternativa de ativação.~~ | ✅ **Corrigido (S-03)** — toggle `🌐 Horizonte Artificial` ativo. |
 | B-05 | `data_loader.py` | ~~Detecção de cabeçalho exigia `"TIME"` e `"Rec"` simultaneamente.~~ | ✅ **Corrigido (S-04)** — aceita `TIME` ou `STIME`; extrai timestamps VADR e GPS. |
 | B-06 | `plots.py` | ~~`add_phase_bands()` recalculava WOW a cada rerun para gerar as faixas de fase.~~ | ✅ **Corrigido (S-05)** — coluna `PHASE` pré-computada na ingestão e salva no Parquet. |
+| B-10 | `plots.py` | Variáveis com valor constante (ex: `PCL` = -5.1° durante todo o voo) não são exibidas visivelmente no gráfico de Análise Temporal multi-variável. O valor aparece corretamente no mouseover, mas a curva é omitida visualmente. A lógica de normalização 0–100 falha para séries com `min == max`. | Impossibilita visualizar variáveis que não variaram no voo analisado. Investigar se o problema está na normalização (`plots.py`) ou no rendering do Plotly para `y=const` com `fixedrange=True`. |
 
 ### 🟢 Menor
 
@@ -97,7 +98,7 @@ Esta seção documenta problemas identificados durante a inspeção do código a
 |---|------|---------------|
 | S-01 | `app.py` | Menu unificado em `main()` — `render_top_menu` removido de `render_main`. |
 | S-02 | `ui_components/__init__.py` | `alertas.json` carregado uma única vez como `_ALERT_DEFS` no nível de módulo. |
-| S-03 | `ui_components/__init__.py` | Toggle `🌐 Horizonte Artificial` alterna entre `FaultPanel` e `AttitudeIndicator`. |
+| S-03 | `ui_components/__init__.py` | ~~Toggle `🌐 Horizonte Artificial` alterna entre `FaultPanel` e `AttitudeIndicator`.~~ | ⏸ **Suspensa em 11/04/2026** — toggle removido da UI; `AttitudeIndicator` preservado em `self._attitude` para bloco futuro de Atitude + Geolocalização. |
 | S-04 | `data_loader.py` | Detecção de cabeçalho aceita `TIME` ou `STIME`. Extrai `VADR_HOURS/MIN/SEC/DAY/MONTH/YEAR` e `GMT_HOUR/MIN/SEC` para exibir hora de início, hora GPS real e desvio `Δ Clock` no cabeçalho. |
 | S-05 | `data_loader.py` + `plots.py` | Coluna `PHASE` (ground/flight) pré-computada em `_coerce_types()` e salva no Parquet. `add_phase_bands()` lê diretamente. |
 | S-06 | `fault_panel.py` | Células de alerta com `overflow:hidden; text-overflow:ellipsis` e tooltip `title` com nome completo. |
@@ -115,6 +116,7 @@ Esta seção documenta problemas identificados durante a inspeção do código a
 | S-08 | Geral | Implementar um **modo escuro/claro** opcional na landing page. | Acessibilidade e preferência do usuário. |
 | S-09 | `TimeController` | Controle de **velocidade de playback** (0.5x, 1x, 2x, 5x) além do Play/Pause. | Análise de eventos críticos em câmera lenta. |
 | S-10 | `EICASPanel` | Expandir `MWC_TRANSLATION` com todos os códigos documentados no manual do motor. | Elimina B-07, melhora o diagnóstico de PMU. |
+| S-16 | `ui_components/` | **Bloco de Atitude + Geolocalização:** novo componente dedicado com `AttitudeIndicator` (horizonte artificial, pitch/roll em tempo real) + mapa Google Maps exibindo a trilha GPS do voo (`GPSLAT`/`GPSLONG`) e posição atual do cursor temporal. | Reutiliza `AttitudeIndicator` já implementado (`self._attitude` em `AttitudeBox`). Requer Google Maps JavaScript API ou `streamlit-folium` como alternativa open-source. |
 
 ### Fase 6 — Alertas Sonoros e Exportação (Planejada)
 

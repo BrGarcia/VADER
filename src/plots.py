@@ -46,36 +46,94 @@ COLORS = {
 NZ_ALERT_THRESHOLD: float = 4.0  # G
 
 
-# -----------------------------------------------------------------------
-# Módulo de Análise Temporal — RF03
-# -----------------------------------------------------------------------
+# Paleta de cores para múltiplas variáveis no gráfico temporal
+_TRACE_PALETTE: list[str] = [
+    "#00B4D8",  # ciano (padrão)
+    "#FFD166",  # amarelo-ouro
+    "#06D6A0",  # verde-água
+    "#EF476F",  # rosáceo
+    "#A855F7",  # violeta
+    "#F97316",  # laranja
+    "#38BDF8",  # azul-claro
+    "#FB7185",  # salmon
+]
+
 
 class TimelinePlotter:
     """Gera o gráfico 2D principal (Eixo X = TIME, Eixo Y = variável selecionada)."""
 
-    def plot(self, df: pd.DataFrame, y_column: str, time_column: str = "TIME") -> go.Figure:
-        """Plota série temporal interativa com zoom/pan habilitados."""
-        fig = go.Figure()
+    def plot(
+        self,
+        df: pd.DataFrame,
+        y_columns: str | list[str],
+        time_column: str = "TIME",
+    ) -> go.Figure:
+        """Plota séries temporais interativas com suporte a múltiplas variáveis.
 
-        fig.add_trace(go.Scatter(
-            x=df[time_column],
-            y=df[y_column],
-            mode="lines",
-            name=y_column,
-            line=dict(color=COLORS["trace"], width=1.5),
-            hovertemplate=(
-                f"<b>Tempo:</b> %{{x:.3f}} s<br>"
-                f"<b>{y_column}:</b> %{{y}}<extra></extra>"
-            ),
-        ))
+        Quando mais de uma variável é fornecida, cada uma recebe seu próprio
+        eixo Y sobrepostospara que escalas distintas (ft, Mach, %) não se
+        distorcem mutuamente.
+
+        Args:
+            df: DataFrame com os dados telemetrados.
+            y_columns: Nome de uma coluna ou lista de nomes de colunas.
+            time_column: Coluna de tempo (padrão: ``TIME``).
+        """
+        if isinstance(y_columns, str):
+            y_columns = [y_columns]
+
+        fig = go.Figure()
 
         t_min = float(df[time_column].min())
         t_max = float(df[time_column].max())
 
-        fig.update_layout(
+        n = len(y_columns)
+
+        for i, col in enumerate(y_columns):
+            if col not in df.columns:
+                continue
+
+            color = _TRACE_PALETTE[i % len(_TRACE_PALETTE)]
+            series = df[col]
+            real_vals = series.values
+
+            # Normaliza para 5–95 para renderização — mantém valores reais no customdata
+            s_clean = series.dropna()
+            if s_clean.empty:
+                continue
+            v_min, v_max = float(s_clean.min()), float(s_clean.max())
+
+            is_constant = (v_max - v_min) < 1e-6
+
+            if not is_constant:
+                # Normaliza para ocupar 5–95% da altura
+                normalized = 5.0 + (series - v_min) / (v_max - v_min) * 90.0
+                line_style = dict(color=color, width=1.5)
+                hover_suffix = ""
+            else:
+                # Série constante: reta visível na baseline (y=8) com estilo diferenciado
+                normalized = series * 0.0 + 8.0
+                line_style = dict(color=color, width=2.5, dash="dot")
+                hover_suffix = " (constante)"
+
+            fig.add_trace(go.Scatter(
+                x=df[time_column],
+                y=normalized,
+                customdata=real_vals,
+                mode="lines",
+                name=f"{col}{hover_suffix}" if is_constant else col,
+                line=line_style,
+                hovertemplate=(
+                    f"<b>{col}:</b> %{{customdata:.4g}}<extra></extra>"
+                ),
+            ))
+
+        # ── Layout: eixo Y único, sem labels (leitura via hover) ──
+        layout = dict(
             plot_bgcolor=COLORS["background"],
             paper_bgcolor=COLORS["background"],
             font=dict(color="#FAFAFA", family="monospace", size=12),
+            hovermode="x unified",
             xaxis=dict(
                 title="Tempo (s)",
                 showgrid=True,
@@ -87,42 +145,50 @@ class TimelinePlotter:
                 maxallowed=t_max,
             ),
             yaxis=dict(
-                title=y_column,
+                range=[-2, 102],          # 0–100 com margem
                 showgrid=True,
                 gridcolor=COLORS["grid"],
-                color="#FAFAFA",
                 zeroline=False,
+                showticklabels=False,     # sem números no eixo — leitura pelo hover
+                showline=False,
+                fixedrange=True,          # bloqueia zoom vertical (cada série tem sua escala)
             ),
-            margin=dict(l=60, r=20, t=20, b=50),
-            height=320,
+            margin=dict(l=20, r=20, t=30, b=50),
+            height=340,
             dragmode="zoom",
-            legend=dict(bgcolor="rgba(0,0,0,0)"),
+            legend=dict(
+                bgcolor="rgba(0,0,0,0.4)",
+                orientation="h",
+                y=1.06,
+                x=0,
+                font=dict(size=11),
+            ),
         )
 
+        fig.update_layout(**layout)
         return fig
+
+
+
 
     def add_fault_markers(
         self,
         fig: go.Figure,
         df: pd.DataFrame,
         fault_columns: list[str],
-        y_column: str = "BALT",
+        y_column: str | list[str] = "BALT",
     ) -> go.Figure:
         """Sobrepõe marcadores no gráfico nos instantes em que uma falha MW* == 1.
 
-        Os marcadores são plotados no valor real da série temporal selecionada
-        (y_column) para que fiquem visíveis sobre a curva.
-
-        Args:
-            fig: Figura gerada por `plot()`.
-            df: DataFrame com colunas MW*.
-            fault_columns: Colunas a varrer (prefixo MW1_/MW2_/MW3_).
-            y_column: Coluna cujos valores são usados como coordenada Y dos marcadores.
+        Os marcadores são plotados no valor real da primeira série temporal
+        selecionada (y_column) para que fiquem visíveis sobre a curva.
         """
+        # Aceita str ou lista — usa sempre a primeira coluna como referência Y
+        y_ref = y_column[0] if isinstance(y_column, list) else y_column
         if "TIME" not in df.columns or not fault_columns:
             return fig
 
-        y_col = y_column if y_column in df.columns else None
+        y_col = y_ref if y_ref in df.columns else None
 
         for col in fault_columns:
             if col not in df.columns:

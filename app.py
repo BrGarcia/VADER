@@ -228,33 +228,44 @@ def render_main(df: pd.DataFrame) -> str | None:
 
     st.markdown("---")
 
-    # ── Análise Temporal: título + seletor de variável inline ──
+    # ── Análise Temporal: título + seletor de variáveis inline ──
     numeric_cols = _LOADER.get_numeric_columns(df)
-    if "last_y_col" not in st.session_state:
-        st.session_state.last_y_col = next(
-            (c for c in ("BALT", "MACH", "APA", "NZ") if c in numeric_cols),
-            numeric_cols[0] if numeric_cols else None
-        )
 
-    col_titulo, col_sel = st.columns([3, 1], gap="small")
+    # Padrão inicial: primeira variável relevante disponível
+    if "last_y_cols" not in st.session_state:
+        default = next(
+            (c for c in ("BALT", "MACH", "APA", "NZ") if c in numeric_cols),
+            numeric_cols[:1]
+        )
+        st.session_state.last_y_cols = [default] if isinstance(default, str) else default
+
+    col_titulo, col_sel = st.columns([2, 1], gap="small")
     with col_titulo:
-        # placeholder — será preenchido após definir y_col
         titulo_placeholder = st.empty()
     with col_sel:
-        y_col = st.selectbox(
-            "Variável",
+        y_cols = st.multiselect(
+            "Variáveis",
             options=numeric_cols,
-            index=numeric_cols.index(st.session_state.last_y_col) if st.session_state.last_y_col in numeric_cols else 0,
+            default=[c for c in st.session_state.last_y_cols if c in numeric_cols] or numeric_cols[:1],
             label_visibility="collapsed",
+            placeholder="Selecione as variáveis...",
             key="main_y_axis_select"
         )
+        # Garante ao menos uma variável selecionada
+        if not y_cols:
+            y_cols = st.session_state.last_y_cols or numeric_cols[:1]
+        st.session_state.last_y_cols = y_cols
+        # Compatibilidade com código que usa last_y_col (singular)
+        y_col = y_cols[0] if y_cols else None
         st.session_state.last_y_col = y_col
 
-    titulo_placeholder.markdown(f"#### 📈 Análise Temporal — `{y_col}`")
+    label_vars = " · ".join(f"`{c}`" for c in y_cols)
+    titulo_placeholder.markdown(f"#### 📈 Análise Temporal — {label_vars}")
 
-    fig = _PLOTTER.plot(df, y_col)
+    fig = _PLOTTER.plot(df, y_cols)
     fig = _PLOTTER.add_phase_bands(fig, df)
-    fig = _PLOTTER.add_fault_markers(fig, df, fault_columns, y_column=y_col)
+    fig = _PLOTTER.add_fault_markers(fig, df, fault_columns, y_column=y_cols)
+
 
     t_cursor = float(snapshot["TIME"]) if "TIME" in snapshot else 0
     fig.add_vline(
