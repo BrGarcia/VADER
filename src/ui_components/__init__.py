@@ -39,14 +39,17 @@ _ALERT_DEFS: list[dict] = sorted(
 # Dicionário de tradução MWC_DATA → (texto EICAS, severidade)
 # -----------------------------------------------------------------------
 
-MWC_TRANSLATION: dict[int, tuple[str, str]] = {
-    0:  ("", "normal"),
-    1:  ("ENG MAN - PMU FAIL", "warning"),
-    5:  ("OIL PRESS",          "caution"),
-    27: ("ELEK OVH",           "caution"),
-    47: ("ENG FIRE",           "warning"),
-    57: ("ENG LIMIT",          "warning"),
-}
+_MWC_CATALOG_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "docs", "mwc_data_catalogo.json"))
+MWC_TRANSLATION: dict[int, tuple[str, str]] = {0: ("", "normal")}
+try:
+    with open(_MWC_CATALOG_PATH, "r", encoding="utf-8") as _fh:
+        for _k, _v in json.load(_fh).items():
+            _msg = _v.get("mensagem")
+            _level = _v.get("categoria")
+            if _msg and _level:
+                MWC_TRANSLATION[int(_k)] = (_msg, _level.lower())
+except Exception:
+    pass
 
 # -----------------------------------------------------------------------
 # Descrições humanas das colunas de falha MW* (Fase 3)
@@ -256,15 +259,7 @@ class AttitudeBox:
 
                 if msg in snapshot.index and snapshot.get(msg, 0) == 1:
                     is_active = True
-                elif mwc_text and msg in mwc_text:
-                    is_active = True
-                elif msg == "ENG MAN" and mwc_code == 1:
-                    is_active = True
-                elif msg == "ENG LMTS" and mwc_code == 57:
-                    is_active = True
-                elif msg == "OIL PRES" and mwc_code == 5:
-                    is_active = True
-                elif msg == "ELEK OVH" and mwc_code == 27:
+                elif mwc_text and msg == mwc_text:
                     is_active = True
 
                 status_list.append({
