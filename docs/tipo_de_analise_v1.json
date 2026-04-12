@@ -1,0 +1,78 @@
+{
+  "meta": {
+    "name": "Flight Analysis Views",
+    "version": "v1",
+    "description": "Conjunto de visões para análise de ocorrências em voo baseadas em telemetria"
+  },
+  "views": {
+    "high_g_event": {
+      "description": "Excedente de carga G em voo",
+      "variables": ["NZ", "NX", "NY", "WOW", "AS", "MACH"],
+      "highlight": ["NZ"],
+      "filters": { "WOW": 0 }
+    },
+    "overspeed": {
+      "description": "Excedente de velocidade",
+      "variables": ["AS", "MACH", "PALT", "RAD_ALT", "WOW"],
+      "highlight": ["AS", "MACH"]
+    },
+    "stall_warning": {
+      "description": "Ângulo de ataque elevado / proximidade de estol",
+      "variables": ["AOA", "AS", "NZ", "PALT", "WOW"],
+      "highlight": ["AOA"]
+    },
+    "hard_landing": {
+      "description": "Alta taxa de impacto no pouso",
+      "variables": ["NZ", "WOW", "RAD_ALT", "ALTR", "AS"],
+      "highlight": ["NZ"],
+      "filters": { "WOW": 1 }
+    },
+    "bounce_landing": {
+      "description": "Pouso com quique",
+      "variables": ["WOW", "NZ", "RAD_ALT", "AS"],
+      "highlight": ["WOW"]
+    },
+    "engine_failure": {
+      "description": "Possível falha de motor",
+      "variables": ["NG", "NP", "ITT", "FF", "OP", "PCL"],
+      "highlight": ["NG", "ITT"]
+    },
+    "engine_overtemp": {
+      "description": "Temperatura excessiva no motor",
+      "variables": ["ITT", "NG", "FF"],
+      "highlight": ["ITT"]
+    },
+    "engine_flameout": {
+      "description": "Apagamento de motor em voo",
+      "variables": ["NG", "NP", "FF", "WOW"],
+      "highlight": ["NG", "NP"],
+      "filters": { "WOW": 0 }
+    },
+    "pressure_loss": {
+      "description": "Queda de pressão",
+      "variables": ["OP", "TPRES", "SPRES"],
+      "highlight": ["OP"]
+    },
+    "sensor_failure": {
+      "description": "Dados inválidos de sensores",
+      "variables": ["AOA", "AOAV", "MACH", "MACHV", "ITT", "ITTV"],
+      "highlight": ["AOAV", "MACHV", "ITTV"]
+    },
+    "aggressive_maneuver": {
+      "description": "Manobra com alta carga dinâmica",
+      "variables": ["NX", "NY", "NZ", "AYR"],
+      "highlight": ["NX", "NY", "NZ"]
+    },
+    "airbrake_high_speed": {
+      "description": "Uso de freio aerodinâmico em alta velocidade",
+      "variables": ["AIRBRK", "AS", "MACH"],
+      "highlight": ["AIRBRK"],
+      "filters": { "AIRBRK": 1 }
+    },
+    "landing_configuration": {
+      "description": "Configuração de pouso",
+      "variables": ["FLAP", "LDG", "AS", "WOW"],
+      "highlight": ["FLAP", "LDG"]
+    }
+  }
+}
