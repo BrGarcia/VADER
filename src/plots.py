@@ -123,6 +123,7 @@ class TimelinePlotter:
                 mode="lines",
                 name=f"{col}{hover_suffix}" if is_constant else col,
                 line=line_style,
+                connectgaps=True,
                 hovertemplate=(
                     f"<b>{col}:</b> %{{customdata:.4g}}<extra></extra>"
                 ),
