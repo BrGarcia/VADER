@@ -155,7 +155,7 @@ class TimelinePlotter:
                 fixedrange=True,          # bloqueia zoom vertical (cada série tem sua escala)
             ),
             margin=dict(l=20, r=20, t=30, b=50),
-            height=340,
+            height=510,
             dragmode="zoom",
             legend=dict(
                 bgcolor="rgba(0,0,0,0.4)",
