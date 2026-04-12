@@ -79,7 +79,7 @@ Esta seção documenta problemas identificados durante a inspeção do código a
 | B-04 | `ui_components/__init__.py` | ~~Horizonte artificial comentado sem rota alternativa de ativação.~~ | ✅ **Corrigido (S-03)** — toggle `🌐 Horizonte Artificial` ativo. |
 | B-05 | `data_loader.py` | ~~Detecção de cabeçalho exigia `"TIME"` e `"Rec"` simultaneamente.~~ | ✅ **Corrigido (S-04)** — aceita `TIME` ou `STIME`; extrai timestamps VADR e GPS. |
 | B-06 | `plots.py` | ~~`add_phase_bands()` recalculava WOW a cada rerun para gerar as faixas de fase.~~ | ✅ **Corrigido (S-05)** — coluna `PHASE` pré-computada na ingestão e salva no Parquet. |
-| B-10 | `plots.py` | Variáveis com valor constante (ex: `PCL` = -5.1° durante todo o voo) não são exibidas visivelmente no gráfico de Análise Temporal multi-variável. O valor aparece corretamente no mouseover, mas a curva é omitida visualmente. A lógica de normalização 0–100 falha para séries com `min == max`. | Impossibilita visualizar variáveis que não variaram no voo analisado. Investigar se o problema está na normalização (`plots.py`) ou no rendering do Plotly para `y=const` com `fixedrange=True`. |
+| B-10 | `plots.py` | ~~Variáveis constantes/sub-rate (ex: `PCL` = -5.1°) eram omitidas visualmente devido a buracos (NaN) nos dados.~~ | ✅ **Corrigido em 12/04/2026** — Solucionado habilitando `connectgaps=True` e inserindo PCL no `ffill`. |
 
 ### 🟢 Menor
 
