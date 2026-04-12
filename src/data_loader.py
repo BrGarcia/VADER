@@ -24,7 +24,7 @@ class DataLoader:
         "BALT", "PALT", "MACH", "AS",
         "AOA", "APA", "ARA", "NZ", "WOW", "LDG",
         "Q", "ITT", "NG", "NP", "FF", "OT", "OP",
-        "PCL",
+        "PCL", "MWC_DATA",
     ]
 
     def __init__(self, raw_dir: str = RAW_DIR, processed_dir: str = PROCESSED_DIR) -> None:

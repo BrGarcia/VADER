@@ -39,20 +39,19 @@ _ALERT_DEFS: list[dict] = sorted(
 # Dicionário de tradução MWC_DATA → (texto EICAS, severidade)
 # -----------------------------------------------------------------------
 
-@st.cache_data
-def get_mwc_translation() -> dict[int, tuple[str, str]]:
-    _mwc_catalog_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "docs", "mwc_data_catalogo.json"))
-    translation: dict[int, tuple[str, str]] = {0: ("", "normal")}
-    try:
-        with open(_mwc_catalog_path, "r", encoding="utf-8") as _fh:
-            for _k, _v in json.load(_fh).items():
-                _msg = _v.get("mensagem")
-                _level = _v.get("categoria")
-                if _msg and _level:
-                    translation[int(_k)] = (_msg, _level.lower())
-    except Exception as e:
-        print(f"Erro ao carregar mwc_data_catalogo.json: {e}")
-    return translation
+_MWC_CATALOG_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "docs", "mwc_data_catalogo.json")
+)
+MWC_TRANSLATION: dict[int, tuple[str, str]] = {0: ("", "normal")}
+try:
+    with open(_MWC_CATALOG_PATH, "r", encoding="utf-8") as _fh:
+        for _k, _v in json.load(_fh).items():
+            _msg = _v.get("mensagem")
+            _level = _v.get("categoria")
+            if _msg and _level:
+                MWC_TRANSLATION[int(_k)] = (_msg, _level.lower())
+except Exception as _e:
+    print(f"[VADER] Erro ao carregar mwc_data_catalogo.json: {_e}")
 
 # -----------------------------------------------------------------------
 # Descrições humanas das colunas de falha MW* (Fase 3)
@@ -253,7 +252,7 @@ class AttitudeBox:
             # no bloco de Análise de Atitude + Geolocalização (Google Maps API).
             # O toggle 🌐 Horizonte Artificial foi removido desta tela — S-03 suspensa.
             mwc_code = int(_safe("MWC_DATA"))
-            mwc_text, _ = get_mwc_translation().get(mwc_code, ("", ""))
+            mwc_text, _ = MWC_TRANSLATION.get(mwc_code, ("", ""))
 
             status_list = []
             for alert in _ALERT_DEFS:
@@ -426,9 +425,8 @@ class EICASPanel:
 
         Retorna ('', 'normal') para código 0 ou desconhecido.
         """
-        translation = get_mwc_translation()
-        if code in translation:
-            return translation[code]
+        if code in MWC_TRANSLATION:
+            return MWC_TRANSLATION[code]
         if code != 0:
             return (f"MWC CODE {code}", "caution")
         return ("", "normal")

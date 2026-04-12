@@ -1,296 +1,296 @@
 {
-  "00": {
-    "description": "Sem mensagens de alerta.",
-    "referencia_eicas": null,
-    "mensagem": null,
-    "categoria": null
-  },
-  "01": {
-    "description": "Falha nas unidades do motor, PMU (ENG_MAN).",
-    "referencia_eicas": "9",
-    "mensagem": "ENG MAN",
-    "categoria": "Warning"
-  },
-  "02": {
-    "description": "Capota de pilotagem aberta (CANOPY).",
-    "referencia_eicas": "8",
-    "mensagem": "CANOPY",
-    "categoria": "Warning"
-  },
-  "03": {
-    "description": "Sobrepressão na cabine de pilotagem (CAB PRES).",
-    "referencia_eicas": "6",
-    "mensagem": "CAB PRES",
-    "categoria": "Warning"
-  },
-  "04": {
-    "description": "Falha do AP (AP).",
-    "referencia_eicas": "2",
-    "mensagem": "AP",
-    "categoria": "Warning"
-  },
-  "05": {
-    "description": "Pressão de óleo fora dos limites (OIL PRES).",
-    "referencia_eicas": "15",
-    "mensagem": "OIL PRES",
-    "categoria": "Warning"
-  },
-  "06": {
-    "description": "Baixo nível de combustível (FUEL LVL).",
-    "referencia_eicas": "12",
-    "mensagem": "FUEL LVL",
-    "categoria": "Warning"
-  },
-  "07": {
-    "description": "Sobretemperatura da bateria (BAT TEMP).",
-    "referencia_eicas": "3",
-    "mensagem": "BAT TEMP",
-    "categoria": "Warning"
-  },
-  "08": {
-    "description": "Vazamento na sangria de ar do motor (BLD LEAK).",
-    "referencia_eicas": "4",
-    "mensagem": "BLD LEAK",
-    "categoria": "Warning"
-  },
-  "09": {
-    "description": "Altitude elevada da cabine (CAB ALT).",
-    "referencia_eicas": "5",
-    "mensagem": "CAB ALT",
-    "categoria": "Warning"
-  },
-  "10": {
-    "description": "Temperatura óleo fora dos limites (OIL TEMP).",
-    "referencia_eicas": "16",
-    "mensagem": "OIL TEMP",
-    "categoria": "Warning"
-  },
-  "11": {
-    "description": "Baixa pressão de saída de oxigênio (OXYGEN).",
-    "referencia_eicas": "17",
-    "mensagem": "OXYGEN",
-    "categoria": "Warning"
-  },
-  "12": {
-    "description": "Alerta de oxigênio dianteiro.",
-    "referencia_eicas": "13",
-    "mensagem": "FWD OXY",
-    "categoria": "Warning"
-  },
-  "13": {
-    "description": "Alerta de oxigênio traseiro.",
-    "referencia_eicas": "1",
-    "mensagem": "AFT",
-    "categoria": "Warning"
-  },
-  "14": {
-    "description": "Baixa pressão no acumulador de emergência (EMER GEAR).",
-    "referencia_eicas": "33",
-    "mensagem": "EMER GEAR",
-    "categoria": "Caution"
-  },
-  "15": {
-    "description": "Falha da transferência de combustível (FUEL XFER).",
-    "referencia_eicas": "35",
-    "mensagem": "FUEL XFER",
-    "categoria": "Caution"
-  },
-  "16": {
-    "description": "Falha na transferência elétrica (ELEC OVR).",
-    "referencia_eicas": "29",
-    "mensagem": "ELEC XFR",
-    "categoria": "Caution"
-  },
-  "17": {
-    "description": "Pino de segurança dianteiro (FWD PIN).",
-    "referencia_eicas": "39",
-    "mensagem": "FWD PIN",
-    "categoria": "Caution"
-  },
-  "18": {
-    "description": "Pino de segurança traseiro (AFT PIN).",
-    "referencia_eicas": "18",
-    "mensagem": "AFT PIN",
-    "categoria": "Caution"
-  },
-  "20": {
-    "description": "Falha do ar condicionado (AIR COND).",
-    "referencia_eicas": "19",
-    "mensagem": "AIR COND",
-    "categoria": "Caution"
-  },
-  "21": {
-    "description": "Falha compensação AP (AP MIST).",
-    "referencia_eicas": "20",
-    "mensagem": "AP MIST",
-    "categoria": "Caution"
-  },
-  "23": {
-    "description": "Combustível no limite (BINGO).",
-    "referencia_eicas": "24",
-    "mensagem": "BINGO",
-    "categoria": "Caution"
-  },
-  "24": {
-    "description": "Detector de limalhas (Caution).",
-    "referencia_eicas": "28",
-    "mensagem": "CHIP DET",
-    "categoria": "Caution"
-  },
-  "27": {
-    "description": "Sobreaquecimento eletrônico (ELEK OVH).",
-    "referencia_eicas": "30",
-    "mensagem": "ELEK OVH",
-    "categoria": "Caution"
-  },
-  "28": {
-    "description": "Baixa pressão freio emergência (EMER BRK).",
-    "referencia_eicas": "31",
-    "mensagem": "EMER BRK",
-    "categoria": "Caution"
-  },
-  "29": {
-    "description": "Barramento emergência (EMER BUS).",
-    "referencia_eicas": "32",
-    "mensagem": "EMER BUS",
-    "categoria": "Caution"
-  },
-  "30": {
-    "description": "Filtro combustível (FUEL FILT).",
-    "referencia_eicas": "36",
-    "mensagem": "FUEL FILT",
-    "categoria": "Caution"
-  },
-  "31": {
-    "description": "Baixa pressão combustível (FUEL PRES).",
-    "referencia_eicas": "37",
-    "mensagem": "FUEL PRES",
-    "categoria": "Caution"
-  },
-  "32": {
-    "description": "Gerador fora barramento (GEN).",
-    "referencia_eicas": "41",
-    "mensagem": "GEN",
-    "categoria": "Caution"
-  },
-  "33": {
-    "description": "Pressão hidráulica baixa (HYD PRES).",
-    "referencia_eicas": "42",
-    "mensagem": "HYD PRES",
-    "categoria": "Caution"
-  },
-  "35": {
-    "description": "Falha leme (MAN RUD T).",
-    "referencia_eicas": "44",
-    "mensagem": "MAN RUD T",
-    "categoria": "Caution"
-  },
-  "38": {
-    "description": "Degelo hélice (PROP DEIC).",
-    "referencia_eicas": "46",
-    "mensagem": "PROP DEIC",
-    "categoria": "Caution"
-  },
-  "39": {
-    "description": "Falha partida motor (STARTER).",
-    "referencia_eicas": "49",
-    "mensagem": "STARTER",
-    "categoria": "Caution"
-  },
-  "42": {
-    "description": "Falha aviônicos (AVIONICS).",
-    "referencia_eicas": "22",
-    "mensagem": "AVIONICS",
-    "categoria": "Caution"
-  },
-  "43": {
-    "description": "Degelo capota (WS DEICE).",
-    "referencia_eicas": "56",
-    "mensagem": "WS DEICE",
-    "categoria": "Advisory"
-  },
-  "44": {
-    "description": "Interconexão elétrica (INTC ON).",
-    "referencia_eicas": "52",
-    "mensagem": "INTC ON",
-    "categoria": "Advisory"
-  },
-  "45": {
-    "description": "Separação inercial (INERT SEP).",
-    "referencia_eicas": "51",
-    "mensagem": "INERT SEP",
-    "categoria": "Advisory"
-  },
-  "46": {
-    "description": "Descompressão cabine (CAB ALT).",
-    "referencia_eicas": "5",
-    "mensagem": "CAB ALT",
-    "categoria": "Warning"
-  },
-  "47": {
-    "description": "Fogo no motor (FIRE).",
-    "referencia_eicas": "11",
-    "mensagem": "FIRE",
-    "categoria": "Warning"
-  },
-  "48": {
-    "description": "Trem de pouso (LDG GEAR).",
-    "referencia_eicas": "14",
-    "mensagem": "LDG GEAR",
-    "categoria": "Warning"
-  },
-  "50": {
-    "description": "Sobreaquecimento bleed (BLD OVHT).",
-    "referencia_eicas": "26",
-    "mensagem": "BLD OVHT",
-    "categoria": "Caution"
-  },
-  "51": {
-    "description": "Sobrecarga engrenagens (GB OVLD).",
-    "referencia_eicas": "40",
-    "mensagem": "GB OVLD",
-    "categoria": "Caution"
-  },
-  "52": {
-    "description": "Tanque asa fechado (WING CLOS).",
-    "referencia_eicas": "55",
-    "mensagem": "WING CLOS",
-    "categoria": "Advisory"
-  },
-  "54": {
-    "description": "Tempestade (STORM).",
-    "referencia_eicas": "50",
-    "mensagem": "STORM",
-    "categoria": "Caution"
-  },
-  "56": {
-    "description": "Desbalanceamento combustível (FUEL IMB).",
-    "referencia_eicas": "34",
-    "mensagem": "FUEL IMB",
-    "categoria": "Caution"
-  },
-  "57": {
-    "description": "Limites motor (ENG LMTS).",
-    "referencia_eicas": "10",
-    "mensagem": "ENG LMTS",
-    "categoria": "Warning"
-  },
-  "58": {
-    "description": "Transferência sobrepujada (XFER OVRD).",
-    "referencia_eicas": "54",
-    "mensagem": "XFER OVRD",
-    "categoria": "Advisory"
-  },
-  "60": {
-    "description": "CHIP DET Warning.",
-    "referencia_eicas": "7",
-    "mensagem": "CHIP DET",
-    "categoria": "Warning"
-  },
-  "61": {
-    "description": "PMU em solo em voo (ENG GND).",
-    "referencia_eicas": null,
-    "mensagem": "ENG GND",
-    "categoria": null
-  }
+    "00": {
+        "description": "Sem mensagens de alerta.",
+        "referencia_eicas": null,
+        "mensagem": null,
+        "categoria": null
+    },
+    "01": {
+        "description": "Falha nas unidades do motor, PMU (ENG_MAN).",
+        "referencia_eicas": "9",
+        "mensagem": "ENG MAN",
+        "categoria": "Warning"
+    },
+    "02": {
+        "description": "Capota de pilotagem aberta (CANOPY).",
+        "referencia_eicas": "8",
+        "mensagem": "CANOPY",
+        "categoria": "Warning"
+    },
+    "03": {
+        "description": "Sobrepressão na cabine de pilotagem (CAB PRES).",
+        "referencia_eicas": "6",
+        "mensagem": "CAB PRES",
+        "categoria": "Warning"
+    },
+    "04": {
+        "description": "Falha do AP (AP).",
+        "referencia_eicas": "2",
+        "mensagem": "AP",
+        "categoria": "Warning"
+    },
+    "05": {
+        "description": "Pressão de óleo fora dos limites (OIL PRES).",
+        "referencia_eicas": "15",
+        "mensagem": "OIL PRES",
+        "categoria": "Warning"
+    },
+    "06": {
+        "description": "Baixo nível de combustível (FUEL LVL).",
+        "referencia_eicas": "12",
+        "mensagem": "FUEL LVL",
+        "categoria": "Warning"
+    },
+    "07": {
+        "description": "Sobretemperatura da bateria (BAT TEMP).",
+        "referencia_eicas": "3",
+        "mensagem": "BAT TEMP",
+        "categoria": "Warning"
+    },
+    "08": {
+        "description": "Vazamento na sangria de ar do motor (BLD LEAK).",
+        "referencia_eicas": "4",
+        "mensagem": "BLD LEAK",
+        "categoria": "Warning"
+    },
+    "09": {
+        "description": "Altitude elevada da cabine (CAB ALT).",
+        "referencia_eicas": "5",
+        "mensagem": "CAB ALT",
+        "categoria": "Warning"
+    },
+    "10": {
+        "description": "Temperatura óleo fora dos limites (OIL TEMP).",
+        "referencia_eicas": "16",
+        "mensagem": "OIL TEMP",
+        "categoria": "Warning"
+    },
+    "11": {
+        "description": "Baixa pressão de saída de oxigênio (OXYGEN).",
+        "referencia_eicas": "17",
+        "mensagem": "OXYGEN",
+        "categoria": "Warning"
+    },
+    "12": {
+        "description": "Alerta de oxigênio dianteiro.",
+        "referencia_eicas": "13",
+        "mensagem": "FWD OXY",
+        "categoria": "Warning"
+    },
+    "13": {
+        "description": "Alerta de oxigênio traseiro.",
+        "referencia_eicas": "1",
+        "mensagem": "AFT",
+        "categoria": "Warning"
+    },
+    "14": {
+        "description": "Baixa pressão no acumulador de emergência (EMER GEAR).",
+        "referencia_eicas": "33",
+        "mensagem": "EMER GEAR",
+        "categoria": "Caution"
+    },
+    "15": {
+        "description": "Falha da transferência de combustível (FUEL XFER).",
+        "referencia_eicas": "35",
+        "mensagem": "FUEL XFER",
+        "categoria": "Caution"
+    },
+    "16": {
+        "description": "Falha na transferência elétrica (ELEC OVR).",
+        "referencia_eicas": "29",
+        "mensagem": "ELEC XFR",
+        "categoria": "Caution"
+    },
+    "17": {
+        "description": "Pino de segurança dianteiro (FWD PIN).",
+        "referencia_eicas": "39",
+        "mensagem": "FWD PIN",
+        "categoria": "Caution"
+    },
+    "18": {
+        "description": "Pino de segurança traseiro (AFT PIN).",
+        "referencia_eicas": "18",
+        "mensagem": "AFT PIN",
+        "categoria": "Caution"
+    },
+    "20": {
+        "description": "Falha do ar condicionado (AIR COND).",
+        "referencia_eicas": "19",
+        "mensagem": "AIR COND",
+        "categoria": "Caution"
+    },
+    "21": {
+        "description": "Falha compensação AP (AP MIST).",
+        "referencia_eicas": "20",
+        "mensagem": "AP MIST",
+        "categoria": "Caution"
+    },
+    "23": {
+        "description": "Combustível no limite (BINGO).",
+        "referencia_eicas": "24",
+        "mensagem": "BINGO",
+        "categoria": "Caution"
+    },
+    "24": {
+        "description": "Detector de limalhas (Caution).",
+        "referencia_eicas": "28",
+        "mensagem": "CHIP DET",
+        "categoria": "Caution"
+    },
+    "27": {
+        "description": "Sobreaquecimento eletrônico (ELEK OVH).",
+        "referencia_eicas": "30",
+        "mensagem": "ELEK OVH",
+        "categoria": "Caution"
+    },
+    "28": {
+        "description": "Baixa pressão freio emergência (EMER BRK).",
+        "referencia_eicas": "31",
+        "mensagem": "EMER BRK",
+        "categoria": "Caution"
+    },
+    "29": {
+        "description": "Barramento emergência (EMER BUS).",
+        "referencia_eicas": "32",
+        "mensagem": "EMER BUS",
+        "categoria": "Caution"
+    },
+    "30": {
+        "description": "Filtro combustível (FUEL FILT).",
+        "referencia_eicas": "36",
+        "mensagem": "FUEL FILT",
+        "categoria": "Caution"
+    },
+    "31": {
+        "description": "Baixa pressão combustível (FUEL PRES).",
+        "referencia_eicas": "37",
+        "mensagem": "FUEL PRES",
+        "categoria": "Caution"
+    },
+    "32": {
+        "description": "Gerador fora barramento (GEN).",
+        "referencia_eicas": "41",
+        "mensagem": "GEN",
+        "categoria": "Caution"
+    },
+    "33": {
+        "description": "Pressão hidráulica baixa (HYD PRES).",
+        "referencia_eicas": "42",
+        "mensagem": "HYD PRES",
+        "categoria": "Caution"
+    },
+    "35": {
+        "description": "Falha leme (MAN RUD T).",
+        "referencia_eicas": "44",
+        "mensagem": "MAN RUD T",
+        "categoria": "Caution"
+    },
+    "38": {
+        "description": "Degelo hélice (PROP DEIC).",
+        "referencia_eicas": "46",
+        "mensagem": "PROP DEIC",
+        "categoria": "Caution"
+    },
+    "39": {
+        "description": "Falha partida motor (STARTER).",
+        "referencia_eicas": "49",
+        "mensagem": "STARTER",
+        "categoria": "Caution"
+    },
+    "42": {
+        "description": "Falha aviônicos (AVIONICS).",
+        "referencia_eicas": "22",
+        "mensagem": "AVIONICS",
+        "categoria": "Caution"
+    },
+    "43": {
+        "description": "Degelo capota (WS DEICE).",
+        "referencia_eicas": "56",
+        "mensagem": "WS DEICE",
+        "categoria": "Advisory"
+    },
+    "44": {
+        "description": "Interconexão elétrica (INTC ON).",
+        "referencia_eicas": "52",
+        "mensagem": "INTC ON",
+        "categoria": "Advisory"
+    },
+    "45": {
+        "description": "Separação inercial (INERT SEP).",
+        "referencia_eicas": "51",
+        "mensagem": "INERT SEP",
+        "categoria": "Advisory"
+    },
+    "46": {
+        "description": "Descompressão cabine (CAB ALT).",
+        "referencia_eicas": "5",
+        "mensagem": "CAB ALT",
+        "categoria": "Warning"
+    },
+    "47": {
+        "description": "Fogo no motor (FIRE).",
+        "referencia_eicas": "11",
+        "mensagem": "FIRE",
+        "categoria": "Warning"
+    },
+    "48": {
+        "description": "Trem de pouso (LDG GEAR).",
+        "referencia_eicas": "14",
+        "mensagem": "LDG GEAR",
+        "categoria": "Warning"
+    },
+    "50": {
+        "description": "Sobreaquecimento bleed (BLD OVHT).",
+        "referencia_eicas": "26",
+        "mensagem": "BLD OVHT",
+        "categoria": "Caution"
+    },
+    "51": {
+        "description": "Sobrecarga engrenagens (GB OVLD).",
+        "referencia_eicas": "40",
+        "mensagem": "GB OVLD",
+        "categoria": "Caution"
+    },
+    "52": {
+        "description": "Tanque asa fechado (WING CLOS).",
+        "referencia_eicas": "55",
+        "mensagem": "WING CLOS",
+        "categoria": "Advisory"
+    },
+    "54": {
+        "description": "Tempestade (STORM).",
+        "referencia_eicas": "50",
+        "mensagem": "STORM",
+        "categoria": "Caution"
+    },
+    "56": {
+        "description": "Desbalanceamento combustível (FUEL IMB).",
+        "referencia_eicas": "34",
+        "mensagem": "FUEL IMB",
+        "categoria": "Caution"
+    },
+    "57": {
+        "description": "Limites motor (ENG LMTS).",
+        "referencia_eicas": "10",
+        "mensagem": "ENG LMTS",
+        "categoria": "Warning"
+    },
+    "58": {
+        "description": "Transferência sobrepujada (XFER OVRD).",
+        "referencia_eicas": "54",
+        "mensagem": "XFER OVRD",
+        "categoria": "Advisory"
+    },
+    "60": {
+        "description": "CHIP DET Warning.",
+        "referencia_eicas": "7",
+        "mensagem": "CHIP DET",
+        "categoria": "Warning"
+    },
+    "61": {
+        "description": "PMU em solo em voo (ENG GND).",
+        "referencia_eicas": null,
+        "mensagem": "ENG GND",
+        "categoria": null
+    }
 }
