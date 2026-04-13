@@ -10,9 +10,9 @@ import os
 import streamlit as st
 import pandas as pd
 
-from src.data_loader import DataLoader
-from src.plots import TimelinePlotter
-from src.ui_components import AttitudeBox, TimeController, EICASPanel, SubsystemCards
+from src.data.data_loader import DataLoader
+from src.ui.plots import TimelinePlotter
+from src.ui.components import AttitudeBox, TimeController, EICASPanel, SubsystemCards
 
 # -----------------------------------------------------------------------
 # Configuração da Página

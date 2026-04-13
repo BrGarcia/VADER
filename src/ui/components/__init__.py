@@ -14,7 +14,7 @@ import os
 import streamlit as st
 import pandas as pd
 
-from src.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD, ENGINE_LIMITS, COLORS
+from src.ui.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD, ENGINE_LIMITS, COLORS
 from .fault_panel import FaultPanel
 
 # -----------------------------------------------------------------------
@@ -40,7 +40,7 @@ _ALERT_DEFS: list[dict] = sorted(
 # -----------------------------------------------------------------------
 
 _MWC_CATALOG_PATH = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "docs", "mwc_data_catalogo.json")
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "docs", "schemas", "mwc_data_catalogo.json")
 )
 MWC_TRANSLATION: dict[int, tuple[str, str]] = {0: ("", "normal")}
 try:
