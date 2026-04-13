@@ -53,15 +53,17 @@ vader/
 ├── .gitignore
 │
 ├── src/
-│   ├── data_loader.py      # Pipeline de processamento de dados (Pandas/PyArrow)
-│   ├── plots.py            # Motores gráficos Plotly (Timeline, Horizon, Gauges)
-│   └── ui_components/      # Pacote de componentes Streamlit
-│       ├── __init__.py     # AttitudeBox, TimeController, EICAS
-│       └── fault_panel.py  # Grid dinâmico de alertas
+│   ├── data/
+│   │   └── data_loader.py  # Pipeline de processamento de dados (Pandas/PyArrow)
+│   └── ui/
+│       ├── plots.py        # Motores gráficos Plotly (Timeline, Horizon, Gauges)
+│       └── components/     # Pacote de componentes Streamlit
+│           ├── __init__.py # AttitudeBox, TimeController, EICAS
+│           └── fault_panel.py # Grid dinâmico de alertas
 │
 ├── data/                   # Diretório de dados (raw e processed)
 ├── assets/                 # Imagens e perfis técnicos da aeronave
-└── docs/                   # Documentação técnica detalhada
+└── docs/                   # Documentação técnica detalhada (Vision, Arch, Roadmap)
 ```
 
 ---
