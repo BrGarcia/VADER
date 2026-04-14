@@ -1,13 +1,13 @@
 # Dicionário de Dados e Plano de Implementação - V.A.D.E.R.
 **Projeto:** Visualizador Analítico de Dados de Engenharia e Rastreio
 **Referência Técnica:** Manual de Manutenção A-29 (Sistema FDR/CVR)
-**Schema de Telemetria:** `docs/aircraft_telemetry_schema_v1.json`
+**Schema de Telemetria:** `docs/schemas/variaveis.json`
 **Versão:** 2.0
 
 ---
 
 ## Objetivo deste Documento
-Este Dicionário de Dados serve como o guia definitivo para a equipe de engenharia de software. O arquivo CSV extraído do equipamento VADR possui 258 colunas brutas. As variáveis estão classificadas por **sistema** e **tipo de sinal**, conforme o schema `aircraft_telemetry_schema_v1.json`. Para garantir uma entrega ágil e funcional, o desenvolvimento é focado em **Fases de Implementação**.
+Este Dicionário de Dados serve como o guia definitivo para a equipe de engenharia de software. O arquivo CSV extraído do equipamento VADR possui 258 colunas brutas. As variáveis estão classificadas por **sistema** e **tipo de sinal**, conforme o schema `docs/schemas/variaveis.json`. Para garantir uma entrega ágil e funcional, o desenvolvimento é focado em **Fases de Implementação**.
 
 ---
 
@@ -27,7 +27,7 @@ O schema de telemetria classifica cada variável em um dos seguintes tipos:
 
 ---
 
-## 🗂️ Índice por Sistema — Schema `aircraft_telemetry_schema_v1.json`
+## 🗂️ Índice por Sistema — Schema `docs/schemas/variaveis.json`
 
 ### ⏱ `time` — Metadados / Temporais
 **Tipo:** `metadata`
@@ -48,17 +48,17 @@ O schema de telemetria classifica cada variável em um dos seguintes tipos:
 
 | Variável | Descrição | Faixa | Unidade |
 | :--- | :--- | :--- | :--- |
-| `NX` | Aceleração Longitudinal | -5G a +5G | G |
-| `NY` | Aceleração Lateral | -2G a +2G | G |
-| `NZ` | Aceleração Vertical (Força G) | -5G a +5G | G |
-| `MACH` | Velocidade Mach | 0 a +4,09 | M |
-| `AS` | Velocidade do Ar | 0 a 1023,9 | nós |
-| `GSDEV` | Desvio GS (Instrument Landing) | — | DDM |
-| `AOA` / `AOAV` | Ângulo de Ataque / Validade | -180 a +179,8 | ° |
+| `NX` | Aceleração Longitudinal | -5G a +5G | 0,01G |
+| `NY` | Aceleração Lateral | -2G a +2G | 0,01G |
+| `NZ` | Aceleração Vertical (Força G) | -5G a +5G | 0,01G |
+| `MACH` | Velocidade Mach | 0 a +4,095 | M |
+| `AS` | Velocidade do Ar | 0 a 1023,9375 | 0,625 nó |
+| `GSDEV` | Desvio GS (Instrument Landing) | DDM | DDM |
+| `AOA` / `AOAV` | Ângulo de Ataque / Validade | -180 a +179,8 | degrees |
 | `QA` / `QAV` | Torque exigido (PMU) / Validade | 0 a 255 | % |
 | `Q` / `QV` | Torque medido / Validade | 0 a 255 | % |
 | `QT` / `QTV` | Torque controle PMU / Validade | 0 a 255 | % |
-| `AYR` / `AYRV` | Taxa de Guinada / Validade | -512 a +511,98 | °/s |
+| `AYR` / `AYRV` | Taxa de Guinada / Validade | -512 a +511,98 | deg/sec |
 
 ---
 
@@ -67,9 +67,9 @@ O schema de telemetria classifica cada variável em um dos seguintes tipos:
 
 | Variável | Descrição | Faixa | Unidade |
 | :--- | :--- | :--- | :--- |
-| `GPSLAT` / `LATV` | Latitude GPS / Validade | -90 a +90 | ° |
-| `GPSLONG` / `LONGV` | Longitude GPS / Validade | -180 a +180 | ° |
-| `MAG_HDG` / `MAG_HDGV` | Proa Magnética / Validade | -180 a +180 | ° |
+| `GPSLAT` / `LATV` | Latitude GPS / Validade | -90 a +90 | degrees |
+| `GPSLONG` / `LONGV` | Longitude GPS / Validade | -180 a +180 | degrees |
+| `MAG_HDG` / `MAG_HDGV` | Proa Magnética / Validade | -180 a +180 | degrees |
 
 ---
 
@@ -78,10 +78,10 @@ O schema de telemetria classifica cada variável em um dos seguintes tipos:
 
 | Variável | Descrição | Faixa | Unidade |
 | :--- | :--- | :--- | :--- |
-| `PALT` / `PALTV` | Altitude Pressão / Validade | 0 a +131.071 | ft |
-| `RAD_ALT` / `RAD_ALTV` | Radioaltímetro / Validade | 0 a +5000 | ft |
-| `BALT` / `BALTV` | Altitude Barométrica / Validade | 0 a +131.071 | ft |
-| `ALTR` / `ALTRV` | Taxa de Altitude / Validade | -32.768 a +32.754 | ft/min |
+| `PALT` / `PALTV` | Altitude Pressão / Validade | Até +131.071 ft | feet |
+| `RAD_ALT` / `RAD_ALTV` | Radioaltímetro / Validade | 0 a +5000 | feet |
+| `BALT` / `BALTV` | Altitude Barométrica / Validade | Até +131.071 ft | feet |
+| `ALTR` / `ALTRV` | Taxa de Altitude / Validade | -32768 a +32754 | ft/min |
 
 ---
 
@@ -92,11 +92,11 @@ O schema de telemetria classifica cada variável em um dos seguintes tipos:
 | :--- | :--- | :--- | :--- |
 | `NG` / `NGV` | Velocidade Gerador de Gás / Validade | 0 a 255 | % RPM |
 | `NP` / `NPV` | Velocidade da Hélice / Validade | 0 a 255 | % RPM |
-| `ITT` / `ITTV` | Temperatura Inter-Turbinas / Validade | 0 a 2047 | °C |
-| `FF` / `FFV` | Fluxo de Combustível / Validade | 0 a 500 | kg/h |
-| `OP` / `OPV` | Pressão do Óleo / Validade | 0 a 200 | psi |
-| `OT` / `OTV` | Temperatura do Óleo / Validade | -50 a +150 | °C |
-| `T1` / `T1V` | Temperatura Entrada Motor / Validade | 0 a 127 | °C |
+| `ITT` / `ITTV` | Temperatura Inter-Turbinas / Validade | 0 a 2047 | degrees C |
+| `FF` / `FFV` | Fluxo de Combustível / Validade | 0 a 500 | Kg/hr |
+| `OP` / `OPV` | Pressão do Óleo / Validade | 0 a 200 | lb/in^2 |
+| `OT` / `OTV` | Temperatura do Óleo / Validade | -50 a +150 | degrees C |
+| `T1` / `T1V` | Temperatura Entrada Motor / Validade | 0 a 127 | degrees C |
 
 ---
 
@@ -107,8 +107,8 @@ O schema de telemetria classifica cada variável em um dos seguintes tipos:
 | :--- | :--- | :--- | :--- |
 | `TPRES` / `TPRESV` | Pressão Total / Validade | 0 a 2047,9 | hPa |
 | `SPRES` / `SPRESV` | Pressão Estática / Validade | 0 a 2047,9 | hPa |
-| `USPRES` / `USPRESV` | Pressão Upstream / Validade | — | — |
-| `PS_FR` / `PS_FRV` | Pressão Combustível Restante / Validade | — | — |
+| `USPRES` / `USPRESV` | Pressão Upstream / Validade | Conforme sensor | hPa |
+| `PS_FR` / `PS_FRV` | Pressão Combustível Restante / Validade | Conforme sensor | Kg |
 
 ---
 
@@ -127,10 +127,10 @@ O schema de telemetria classifica cada variável em um dos seguintes tipos:
 
 | Variável | Descrição | Faixa | Unidade |
 | :--- | :--- | :--- | :--- |
-| `AIL_POS` | Posição do Aileron | -17 a +15,9 | ° |
-| `ELE_POS` | Posição do Profundor | -18,2 a +12,1 | ° |
-| `RUD_POS` | Posição do Leme | -25 a +25 | ° |
-| `FLAP` / `FLAPV` | Posição do Flape (0=Baixo, 2=Cima) / Validade | Octal 0/2 | — |
+| `AIL_POS` | Posição do Aileron | -17 a +15,9 | 0,32 grau |
+| `ELE_POS` | Posição do Profundor | -18,2 a +12,1 | 0,32 grau |
+| `RUD_POS` | Posição do Leme | -25 a +25 | 0,5 grau |
+| `FLAP` / `FLAPV` | Posição do Flape (0=Baixo, 2=Cima) / Validade | Octal 0 (baixo) / Octal 2 (cima) | Estado discreto |
 
 ---
 
@@ -154,7 +154,7 @@ O schema de telemetria classifica cada variável em um dos seguintes tipos:
 | Variável | Lógica | Descrição |
 | :--- | :--- | :--- |
 | `WOW` | 0=Solo / 1=Ar | Weight on Wheels — fase de voo |
-| `LDG` | **0=Abaixado** / 1=Recolhido | Trem de Pouso (**lógica invertida**) |
+| `LDG` | 0=abaixado / 1=recolhido | Trem de Pouso (**lógica invertida**) |
 | `CANOPY` | 0=Aberta / 1=Fechada | Estado da Capota |
 | `AIRBRK` | 0=Recolhido / 1=Aberto | Freio Aerodinâmico |
 | `EMER` / `EMERV` | 0=Normal / 1=Emergência | Barra de Emergência / Validade |
@@ -166,7 +166,7 @@ O schema de telemetria classifica cada variável em um dos seguintes tipos:
 
 | Variável | Lógica | Descrição |
 | :--- | :--- | :--- |
-| `ENG_START` | 0=Em partida / 1=Sem partida | Flag de partida do motor |
+| `ENG_START` | 0=em partida / 1=sem partida | Flag de partida do motor |
 | `ENGFIRE` | 0=Normal / 1=Fogo | Detecção de fogo no motor |
 | `BLDAIR` | 0=Desativado / 1=Ativo | Ar de Sangria do Motor |
 | `HFPTT` | — | Flag discreta PMU |
@@ -247,10 +247,10 @@ Inclui compensadores de voo, massas nos pilones e parâmetros de modo:
 | `Q` | `flight_dynamics` | analog | Torque medido | 0–255% | % |
 | `NP` | `engine` | analog | Velocidade da Hélice | 0–255% | % RPM |
 | `NG` | `engine` | analog | Velocidade Gerador de Gás | 0–255% | % RPM |
-| `ITT` | `engine` | analog | Temperatura Inter-Turbinas | 0–2047°C | °C |
-| `FF` | `engine` | analog | Fluxo de Combustível | 0–500 kg/h | kg/h |
-| `OT` | `engine` | analog | Temperatura do Óleo | -50–150°C | °C |
-| `OP` | `engine` | analog | Pressão do Óleo | 0–200 psi | psi |
+| `ITT` | `engine` | analog | Temperatura Inter-Turbinas | 0–2047°C | degrees C |
+| `FF` | `engine` | analog | Fluxo de Combustível | 0–500 kg/h | Kg/hr |
+| `OT` | `engine` | analog | Temperatura do Óleo | -50–150°C | degrees C |
+| `OP` | `engine` | analog | Pressão do Óleo | 0–200 psi | lb/in^2 |
 
 ---
 
@@ -276,13 +276,13 @@ Sistema: `maintenance_warnings` | Tipo: `digital` | **Lógica: 0 = Normal, 1 = F
 
 ## 🔗 Referência do Schema
 
-O arquivo `docs/aircraft_telemetry_schema_v1.json` é a **fonte de verdade** para:
+O arquivo `docs/schemas/variaveis.json` é a **fonte de verdade** para:
 - Identificar se uma variável é analógica (plotar como linha) ou digital (plotar como evento).
 - Separar variáveis de validade (sufixo `V`) das variáveis de dado.
 - Agrupar variáveis por sistema para os cards de subsistemas da UI.
 
 ```
-aircraft_telemetry_schema_v1.json
+variaveis.json
 └── systems
     ├── time             → metadata   (eixo X)
     ├── flight_dynamics  → analog     (NX, NY, NZ, MACH, AOA, Q...)
@@ -302,4 +302,4 @@ aircraft_telemetry_schema_v1.json
 ```
 
 ---
-**Versão 2.0 — Atualizado com `aircraft_telemetry_schema_v1.json`**
+**Versão 2.0 — Atualizado com `variaveis.json`**

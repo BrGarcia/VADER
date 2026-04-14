@@ -33,7 +33,7 @@ Este arquivo serve para registrar sugestões, melhorias e novas funcionalidades 
 - **Motivação:** Facilita o trabalho do inspetor de manutenção, que não precisa "procurar" a falha no gráfico.
 
 ### I-17: Auditoria de Integridade do Schema Canônico
-- **Descrição:** Implementar uma verificação automática para comparar o header do CSV carregado com `docs/schemas/aircraft_telemetry_schema_v1.json`.
+- **Descrição:** Implementar uma verificação automática para comparar o header do CSV carregado com `docs/schemas/variaveis.json`.
 - **Motivação:** Hoje o schema é tratado como fonte de verdade, então qualquer divergência entre contrato e arquivo real pode quebrar views, filtros e o EICAS.
 - **Implementação sugerida:** Na ingestão, listar colunas ausentes/extras e exibir um relatório de compatibilidade; em desenvolvimento, adicionar um teste automatizado que falhe quando o schema ficar desatualizado.
 - **Benefício:** Evita deriva entre documentação, código e telemetria real, reduzindo regressões silenciosas.
