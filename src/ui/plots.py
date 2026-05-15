@@ -11,8 +11,51 @@ Módulos cobertos:
 from __future__ import annotations
 
 import math
+import os
+import json
+from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
+
+# Carrega o schema de variáveis para formatação correta dos gráficos
+_SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "docs" / "schemas" / "variaveis_v1.json"
+try:
+    with open(_SCHEMA_PATH, "r", encoding="utf-8") as _f:
+        _VAR_SCHEMA = json.load(_f)
+except Exception:
+    _VAR_SCHEMA = {}
+
+def get_hovertemplate(col: str) -> str:
+    """Constroi o D3-format adequado e inclui a unidade da variável com base no schema."""
+    schema = _VAR_SCHEMA.get(col)
+    if not schema:
+        # Fallback se não encontrar a variável no JSON (duas casas decimais sem notação científica)
+        return f"<b>{col}:</b> %{{customdata:,.2f}}<extra></extra>"
+        
+    unidade = schema.get("unidade_de_medida", "")
+    resolucao = str(schema.get("resolucao", ""))
+    
+    if not unidade or unidade.lower() in ("null", "n/a", "estado lógico", "octal"):
+        unidade_str = ""
+    else:
+        unidade_str = f" {unidade}"
+        
+    # Determina o número de casas decimais pela resolução ou heurísticas da faixa
+    decimals = 0
+    if "," in resolucao:
+        dec_part = resolucao.split(",")[1].split(" ")[0]
+        decimals = len(dec_part)
+    elif "." in resolucao:
+        dec_part = resolucao.split(".")[1].split(" ")[0]
+        decimals = len(dec_part)
+    else:
+        faixa = str(schema.get("faixa", ""))
+        if "4,095" in faixa: decimals = 3
+        elif "2047,9" in faixa: decimals = 1
+        elif col in ("BALT", "PALT", "RAD_ALT", "ALTR"): decimals = 0  # altimetria int
+        else: decimals = 0
+        
+    return f"<b>{col}:</b> %{{customdata:,.{decimals}f}}{unidade_str}<extra></extra>"
 
 
 # -----------------------------------------------------------------------
@@ -124,9 +167,7 @@ class TimelinePlotter:
                 name=f"{col}{hover_suffix}" if is_constant else col,
                 line=line_style,
                 connectgaps=True,
-                hovertemplate=(
-                    f"<b>{col}:</b> %{{customdata:.4g}}<extra></extra>"
-                ),
+                hovertemplate=get_hovertemplate(col),
             ))
 
         # ── Layout: eixo Y único, sem labels (leitura via hover) ──

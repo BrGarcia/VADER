@@ -16,6 +16,7 @@ Revisão dos artefatos em `docs/` com foco em correção, segurança e arquitetu
 
 ### 1. Crítico
 **Schema declarado como fonte de verdade não cobre o formato real do CSV nem os fluxos documentados**
+*(✅ Corrigido em 2026-04-14)*
 
 **Evidência**
 - `docs/04_data_model.md:279` declara que `aircraft_telemetry_schema_v1.json` é a fonte de verdade.
@@ -36,6 +37,7 @@ Revisão dos artefatos em `docs/` com foco em correção, segurança e arquitetu
 
 ### 2. Alto
 **Visões analíticas referenciam variáveis inexistentes no schema oficial**
+*(✅ Corrigido em 2026-04-14)*
 
 **Evidência**
 - `docs/schemas/tipo_de_analise_v1.json:37` usa `PCL`.
@@ -121,6 +123,7 @@ Revisão dos artefatos em `docs/` com foco em correção, segurança e arquitetu
 
 ### 7. Médio
 **Artefatos de documentação e schema estão incompletos ou apontam para caminhos errados**
+*(✅ Corrigido em 2026-04-14)*
 
 **Evidência**
 - `docs/04_data_model.md:4` e `docs/04_data_model.md:279` apontam para `docs/aircraft_telemetry_schema_v1.json`, mas o arquivo real está em `docs/schemas/aircraft_telemetry_schema_v1.json`.
