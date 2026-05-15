@@ -42,7 +42,7 @@ O sistema deve ser construído com uma arquitetura baseada em **Módulos/Compone
 3.  **Fallback (Suporte a Qualquer Combinação):** O sistema será desenhado para carregar e reproduzir **qualquer combinação de arquivos** disponível na pasta, sem dependências obrigatórias entre eles.
     *   **Apenas um tipo de dado:** Se existir apenas os arquivos de um tipo (ex: apenas vídeos do EICAS, ou apenas o TRIMM, ou apenas o CSV do VADR), o módulo correspondente será carregado e funcionará de forma isolada e autossuficiente.
     *   **Múltiplos parciais:** Se existirem fontes variadas (ex: apenas TRIMM e EICAS), somente esses módulos serão exibidos e a sincronia funcionará entre eles.
-    *   **Ausência de dados:** Para cada fonte não encontrada na pasta, o respectivo painel será ocultado ou exibirá um alerta ("Sem dados"), sem travar ou impedir a reprodução do restante. Se a pasta estiver 100% vazia, exibirá uma mensagem de erro.
+    *   **Ausência de dados:** Para cada fonte não encontrada na pasta, o respectivo painel será ocultado ou exibirá um alerta ("Sem dados"), sem travar ou impedir a reprodução do restante. Se a pasta estiver 100% vazia, exibirá uma mensagem de erro como "Nenhum arquivo encontrado na pasta."
 
 ## 5. Estratégia de Sincronização
 Como as gravações iniciam em momentos distintos, é impossível dar "Play" e tudo estar sincronizado magicamente na primeira vez sem um marco (timestamp).
@@ -58,6 +58,14 @@ Como as gravações iniciam em momentos distintos, é impossível dar "Play" e t
 ## 6. Reaproveitamento do Código Legado (VADER)
 *   A lógica de extração e formatação do CSV já existente no VADER será isolada em uma classe ou função independente (ex: `VadrParser`).
 *   Esse parser apenas entregará os dados em um formato que o novo Front-end de visualização consiga consumir (JSON ou Arrays de tempo/valor).
+
+## 7. Estratégia da Página Inicial (Landing Page)
+Para manter a compatibilidade com o sistema atual e permitir a evolução gradual (DTC e ALL-IN-ONE), a página inicial (Landing Page) deve atuar como um **Hub/Launchpad de Módulos**.
+*   **Design em Cards:** A interface inicial apresentará grandes "Cards" (cartões) interativos, onde cada um representa um modo de operação isolado.
+    *   **Card 1: Modo VADR (Atual):** Mantém o fluxo clássico. O usuário faz upload ou seleciona apenas o CSV e a interface funciona exatamente como o VADER de hoje.
+    *   **Card 2: Modo DTC (Futuro):** Direcionará para a interface focada apenas em leitura e análise de falhas/dados brutos extraídos do `.DMP`.
+    *   **Card 3: Modo COMPLETO (Inspetoria/All-In-One):** Exigirá a seleção da pasta "MATRICULA_DATA" e abrirá o novo dashboard que integra Vídeos + Gráficos (descrito neste documento).
+*   **Vantagem dessa abordagem:** Impede que o código de um modo interfira no outro. O backend saberá exatamente qual "rota" ou "serviço" instanciar com base no card selecionado.
 
 ## Próximos Passos (Para o Plano de Implementação)
 1.  Definir o Stack Tecnológico para essa interface visual (Python com PyQt/PySide? Web com HTML/JS + Backend Python? Streamlit/Dash?).
