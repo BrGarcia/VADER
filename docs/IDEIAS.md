@@ -10,6 +10,12 @@ Este arquivo serve para registrar sugestões, melhorias e novas funcionalidades 
 - **Motivação:** Se o sensor de *Weight on Wheels* falhar, a indicação AR/SOLO torna-se não confiável.
 - **Visual:** Exibir um aviso discreto "⚠️ SENSOR FAIL" no card quando `MW2_FWOW == 1`.
 
+### I-16: Normalização da Lógica AR/SOLO (`WOW` → `PHASE`)
+- **Descrição:** Criar uma camada de normalização que converta o valor bruto de `WOW` em um estado canônico `PHASE` (`ground` / `flight`) validado na ingestão.
+- **Motivação:** A semântica de `WOW` é crítica para pouso, decolagem, flameout e filtros de análise. Centralizar essa regra evita inversões de lógica em dashboards e detecção de eventos.
+- **Implementação sugerida:** No `DataLoader`, gerar `PHASE` a partir de `WOW`, validar a polaridade com trechos de CSV de referência e expor apenas `PHASE` para filtros de negócio e cards de UI.
+- **Benefício:** Reduz erros de interpretação de fase de voo e torna as análises mais previsíveis.
+
 ### I-04: Inferência de Transição do Trem de Pouso
 - **Descrição:** Criar uma lógica para detectar e exibir o estado "EM TRÂNSITO" do trem de pouso.
 - **Motivação:** Como o CSV não fornece uma variável de transição, podemos inferir o movimento monitorando a mudança de estado da variável `LDG`.
@@ -25,6 +31,12 @@ Este arquivo serve para registrar sugestões, melhorias e novas funcionalidades 
 ### I-07: Detecção Automática de Excedências (Over-G / ITT)
 - **Descrição:** Algoritmo que varre o CSV no carregamento e lista todos os momentos onde limites estruturais (`NZ > 4.0G`) ou térmicos (`ITT > 1000°C`) foram ultrapassados.
 - **Motivação:** Facilita o trabalho do inspetor de manutenção, que não precisa "procurar" a falha no gráfico.
+
+### I-17: Auditoria de Integridade do Schema Canônico
+- **Descrição:** Implementar uma verificação automática para comparar o header do CSV carregado com `docs/schemas/aircraft_telemetry_schema_v1.json`.
+- **Motivação:** Hoje o schema é tratado como fonte de verdade, então qualquer divergência entre contrato e arquivo real pode quebrar views, filtros e o EICAS.
+- **Implementação sugerida:** Na ingestão, listar colunas ausentes/extras e exibir um relatório de compatibilidade; em desenvolvimento, adicionar um teste automatizado que falhe quando o schema ficar desatualizado.
+- **Benefício:** Evita deriva entre documentação, código e telemetria real, reduzindo regressões silenciosas.
 
 ---
 
@@ -67,6 +79,18 @@ Este arquivo serve para registrar sugestões, melhorias e novas funcionalidades 
 ### I-13: Exportação de Relatório de Manutenção (PDF)
 - **Descrição:** Botão para gerar um PDF consolidado com metadados da ANV, lista de falhas detectadas e estatísticas de uso (Tempo de voo, G máximo, ITT máximo).
 
+### I-18: Política Segura de Cache e Retenção Local
+- **Descrição:** Adicionar um modo de operação com cache controlado para CSV/Parquet e histórico de arquivos, com opção de retenção mínima.
+- **Motivação:** O projeto trabalha com dados sigilosos; manter cópias derivadas e histórico sem política explícita aumenta o risco operacional.
+- **Implementação sugerida:** Criar configurações como `sem cache`, `cache temporário da sessão` e `cache persistente`, além de rotina de expurgo e indicador visual mostrando onde os artefatos foram gravados.
+- **Benefício:** Melhora a segurança operacional sem abrir mão de performance quando o ambiente permitir persistência.
+
+### I-19: Forward-Fill Seletivo por Tipo de Sinal
+- **Descrição:** Restringir o `ffill` apenas para variáveis analógicas sub-rate previamente aprovadas.
+- **Motivação:** Propagar automaticamente estados discretos, flags de falha ou colunas de validade pode criar eventos artificiais e mascarar anomalias reais.
+- **Implementação sugerida:** Manter uma whitelist no schema ou em configuração dedicada indicando quais colunas aceitam `ffill`, e registrar no Parquet quais transformações foram aplicadas.
+- **Benefício:** Preserva a fidelidade da telemetria e torna a ingestão auditável.
+
 ## ⚡ Produtividade e Auditoria Rápida
 ### I-14: Smart Audit (Verificação de Excedência Direta)
 - **Descrição:** Uma nova seção na Landing Page que permite ao usuário carregar um CSV e definir filtros específicos (ex: "NZ > 5.0" ou "ITT > 1050") antes de entrar na análise completa.
@@ -82,4 +106,10 @@ Este arquivo serve para registrar sugestões, melhorias e novas funcionalidades 
 - **Motivação:** O componente está pronto e testado (possui até um modo demo standalone). A variável `ALTR` (taxa de altitude, ft/min) já é gravada pelo VADR e coberta pelo dicionário de dados.
 - **Implementação sugerida:** Adicionar um quinto card no `SubsystemCards`, ou incluir o gauge VSI na coluna de dados de voo do `AttitudeBox` abaixo do AOA.
 - **Referência:** `src/ui_components/vsi.py` — classe `VerticalSpeedIndicator`, faixa -3000 a +3000 ft/min.
+
+### I-20: Snapshot Temporal Estável para Componentes
+- **Descrição:** Evoluir o controle temporal para trabalhar com um snapshot estável de amostra, em vez de depender apenas do índice global do DataFrame.
+- **Motivação:** Reordenação, filtros, troca de arquivo e comparação entre voos podem desalinhar componentes quando todos dependem do mesmo índice bruto.
+- **Implementação sugerida:** Criar um objeto de snapshot com `record_id`, `TIME`, `STIME` e linha resolvida, repassando esse objeto aos componentes de UI em vez de cada módulo consultar o índice diretamente no `session_state`.
+- **Benefício:** Aumenta a robustez do sincronismo entre gráficos, cards e painéis, além de facilitar testes e evolução futura para modo comparativo.
 
