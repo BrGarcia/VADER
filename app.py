@@ -69,11 +69,17 @@ def render_landing() -> None:
 
     st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
-    # ── Box de configuração centralizado ──
-    _l, _box, _r = st.columns([1, 2, 1])
-    with _box:
+    # ── Título dos Modos ──
+    st.markdown("<h3 style='text-align: center; margin-bottom: 24px; color: #ddd;'>Selecione o Modo de Análise</h3>", unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns(3, gap="large")
+
+    # ── MODO VADR (Atual) ──
+    with col1:
         with st.container(border=True):
-            st.markdown("<p style='font-weight: bold; margin-bottom: 8px; font-size: 0.85rem; text-align: center;'>🛠️ CONFIGURAÇÕES E DADOS DE VOO</p>", unsafe_allow_html=True)
+            st.markdown("<h4 style='text-align: center; color: #4CAF50; margin-bottom: 5px;'>📊 Modo VADR</h4>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 0.8rem; text-align: center; color: #aaa; min-height: 40px;'>Análise clássica focada no arquivo CSV de telemetria.</p>", unsafe_allow_html=True)
+            st.markdown("---")
 
             # Histórico
             if recent_files:
@@ -87,7 +93,7 @@ def render_landing() -> None:
                 )
 
             # Upload
-            st.markdown("<p style='font-size: 0.72rem; font-weight: bold; margin-bottom: 0px; text-align: center;'>⬆️ UPLOAD CSV</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 0.72rem; font-weight: bold; margin-bottom: 0px; text-align: center; margin-top: 10px;'>⬆️ UPLOAD CSV</p>", unsafe_allow_html=True)
             st.file_uploader(
                 "Upload CSV",
                 type=["csv"],
@@ -107,20 +113,17 @@ def render_landing() -> None:
                 nome = uploaded.name if uploaded else selected_recent
                 st.markdown(f"<p style='font-size: 0.72rem; text-align: center; color: #4CAF50; margin-top: 2px;'>✅ {nome}</p>", unsafe_allow_html=True)
             else:
-                st.markdown("<p style='font-size: 0.72rem; text-align: center; color: #888; margin-top: 2px;'>Selecione um arquivo CSV para habilitar o envio.</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size: 0.72rem; text-align: center; color: #888; margin-top: 2px;'>Selecione um arquivo CSV.</p>", unsafe_allow_html=True)
 
             # ── Botão ENVIAR ──
-            _, btn_col, _ = st.columns([1, 2, 1])
-            with btn_col:
-                enviar = st.button(
-                    "▶  ENVIAR",
-                    type="primary",
-                    use_container_width=True,
-                    key="landing_submit_btn",
-                    disabled=not arquivo_pronto,
-                )
+            enviar = st.button(
+                "▶  INICIAR VADR",
+                type="primary",
+                use_container_width=True,
+                key="landing_submit_btn",
+                disabled=not arquivo_pronto,
+            )
 
-            # ── Processa somente ao clicar ENVIAR ──
             if enviar:
                 if uploaded is not None:
                     new_df = _ingest(uploaded.getvalue(), uploaded.name)
@@ -139,6 +142,26 @@ def render_landing() -> None:
                         st.rerun()
                     else:
                         st.error("❌ Falha ao carregar o arquivo do histórico.")
+
+    # ── MODO DTC (Futuro) ──
+    with col2:
+        with st.container(border=True):
+            st.markdown("<h4 style='text-align: center; color: #FF9800; margin-bottom: 5px;'>🛠️ Modo DTC</h4>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 0.8rem; text-align: center; color: #aaa; min-height: 40px;'>Leitura e decodificação de arquivos binários de falha (TRIMM.DMP).</p>", unsafe_allow_html=True)
+            st.markdown("---")
+            st.info("🚧 Em Desenvolvimento")
+            st.markdown("<div style='height: 45px;'></div>", unsafe_allow_html=True)
+            st.button("▶  INICIAR DTC", disabled=True, use_container_width=True, key="btn_dtc_disabled")
+
+    # ── MODO COMPLETO (Futuro) ──
+    with col3:
+        with st.container(border=True):
+            st.markdown("<h4 style='text-align: center; color: #2196F3; margin-bottom: 5px;'>🦅 Modo COMPLETA</h4>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 0.8rem; text-align: center; color: #aaa; min-height: 40px;'>Dashboard All-in-One Integrado (HUD, EICAS, CSV e DTC).</p>", unsafe_allow_html=True)
+            st.markdown("---")
+            st.info("🚧 Em Desenvolvimento")
+            st.markdown("<div style='height: 45px;'></div>", unsafe_allow_html=True)
+            st.button("▶  INICIAR COMPLETA", disabled=True, use_container_width=True, key="btn_completa_disabled")
 
 
 # -----------------------------------------------------------------------
