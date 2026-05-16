@@ -2,30 +2,87 @@ import os
 import subprocess
 from pathlib import Path
 import sys
+import platform
+import shutil
+
+def get_ffmpeg_path():
+    """Identifica o OS, procura ou instala o ffmpeg, e retorna o comando para usá-lo."""
+    sistema = platform.system()
+    base_dir = Path(__file__).parent.absolute()
+
+    if sistema == "Windows":
+        # No Windows, priorizamos o ffmpeg.exe na mesma pasta
+        ffmpeg_local = base_dir / "ffmpeg.exe"
+        if ffmpeg_local.exists():
+            return str(ffmpeg_local)
+        
+        # Tenta ver se está no PATH global do Windows
+        ffmpeg_global = shutil.which("ffmpeg")
+        if ffmpeg_global:
+            return ffmpeg_global
+            
+        print(f"\n[ERRO] ffmpeg.exe não encontrado no Windows.")
+        print(f"Por favor, baixe e cole o ffmpeg.exe na pasta:\n{base_dir}")
+        return None
+
+    elif sistema == "Darwin": # MacOS
+        # Primeiro, vê se já existe no sistema (via brew ou outro)
+        ffmpeg_global = shutil.which("ffmpeg")
+        if ffmpeg_global:
+            return ffmpeg_global
+            
+        print("\n[AVISO] FFmpeg não encontrado no MacOS. Tentando instalar via Homebrew...")
+        
+        # Verifica se tem Homebrew instalado
+        if not shutil.which("brew"):
+            print("[ERRO] Homebrew não encontrado. Não é possível instalar o FFmpeg automaticamente.")
+            print("Instale o Homebrew executando no terminal do Mac:")
+            print('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"')
+            return None
+            
+        # Tenta instalar o ffmpeg usando brew
+        try:
+            subprocess.run(["brew", "install", "ffmpeg"], check=True)
+            print("✅ FFmpeg instalado com sucesso no Mac!")
+            return shutil.which("ffmpeg")
+        except subprocess.CalledProcessError:
+            print("[ERRO] Falha ao tentar instalar o FFmpeg via Homebrew.")
+            return None
+
+    elif sistema == "Linux":
+        # No linux, apenas checamos o path
+        ffmpeg_global = shutil.which("ffmpeg")
+        if ffmpeg_global:
+            return ffmpeg_global
+            
+        print("\n[AVISO] FFmpeg não encontrado no Linux.")
+        print("Instale usando seu gerenciador de pacotes (ex: sudo apt install ffmpeg).")
+        return None
+
+    else:
+        print(f"\n[ERRO] Sistema operacional não reconhecido: {sistema}")
+        return None
+
 
 def main():
     print("="*50)
     print("   CONVERSOR E UNIFICADOR DE VÍDEOS MPG -> MP4")
     print("="*50)
 
-    # Pasta atual do script
-    base_dir = Path(__file__).parent.absolute()
-    
-    # Caminho do ffmpeg
-    ffmpeg_path = base_dir / "ffmpeg.exe"
-    
-    if not ffmpeg_path.exists():
-        print(f"\n[ERRO] ffmpeg.exe não encontrado na pasta:\n{base_dir}")
-        print("Por favor, cole o ffmpeg.exe na mesma pasta deste script e tente novamente.")
+    # Identifica a plataforma e obtém o executável do ffmpeg
+    ffmpeg_cmd = get_ffmpeg_path()
+    if not ffmpeg_cmd:
         input("\nPressione ENTER para sair...")
         return
+
+    base_dir = Path(__file__).parent.absolute()
 
     # Buscar arquivos .mpg
     mpg_files = list(base_dir.glob("*.mpg"))
     if not mpg_files:
         mpg_files = list(base_dir.glob("*.mpeg"))
         
-    # Remove qualquer 'unido_temp.mpg' anterior da lista para não tentar unir consigo mesmo
+    # Remove qualquer lixo de processos anteriores
     mpg_files = [f for f in mpg_files if f.name != "unido_temp.mpg"]
 
     if not mpg_files:
@@ -33,7 +90,7 @@ def main():
         input("\nPressione ENTER para sair...")
         return
 
-    # Ordenar alfabeticamente para garantir a sequência correta
+    # Ordenar alfabeticamente para garantir a sequência
     mpg_files.sort(key=lambda x: x.name)
     
     print(f"\nForam encontrados {len(mpg_files)} arquivos MPG:")
@@ -51,21 +108,15 @@ def main():
     if not nome_saida:
         nome_saida = "video_final"
 
-    # Arquivos de trabalho
     concat_list_path = base_dir / "concat_list.txt"
     output_mpg = base_dir / "unido_temp.mpg"
     output_mp4 = base_dir / f"{nome_saida}.mp4"
     
-    # Limpa tentativas anteriores
-    if output_mpg.exists():
-        output_mpg.unlink()
-    if output_mp4.exists():
-        output_mp4.unlink()
+    if output_mpg.exists(): output_mpg.unlink()
+    if output_mp4.exists(): output_mp4.unlink()
 
-    # Cria a lista de arquivos para o FFmpeg (Concat Demuxer)
     with open(concat_list_path, "w", encoding="utf-8") as f:
         for mpg in mpg_files:
-            # Caminho relativo é mais seguro para o FFmpeg no Windows
             f.write(f"file '{mpg.name}'\n")
 
     # ---------------------------------------------------------
@@ -73,7 +124,7 @@ def main():
     # ---------------------------------------------------------
     print("\n[Passo 1/2] Unindo arquivos MPG de forma rápida (sem recodificar)...")
     cmd_concat = [
-        str(ffmpeg_path),
+        ffmpeg_cmd,
         "-y",
         "-f", "concat",
         "-safe", "0",
@@ -95,7 +146,7 @@ def main():
     # ---------------------------------------------------------
     print(f"\n[Passo 2/2] Convertendo para {output_mp4.name} (Isso pode demorar)...")
     cmd_convert = [
-        str(ffmpeg_path),
+        ffmpeg_cmd,
         "-y",
         "-i", str(output_mpg),
         "-c:v", "libx264",
@@ -110,21 +161,16 @@ def main():
         
     cmd_convert.append(str(output_mp4))
     
-    # Oculta stdout mas deixa stderr para o FFmpeg mostrar o progresso caso queiramos,
-    # porém para manter limpo, vamos jogar stdout para o console normal.
     res_convert = subprocess.run(cmd_convert)
     
     if res_convert.returncode == 0 and output_mp4.exists():
         print(f"\n🎉 SUCESSO! Arquivo salvo em:\n{output_mp4.absolute()}")
-        
-        # Limpeza dos arquivos temporários
         try:
             concat_list_path.unlink()
             output_mpg.unlink()
             print(" 🧹 Limpeza de arquivos temporários concluída.")
-        except Exception as e:
-            print(f" [Aviso] Não foi possível apagar os arquivos temporários: {e}")
-            
+        except:
+            pass
     else:
         print("\n[ERRO] Falha durante a conversão final para MP4.")
 

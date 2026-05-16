@@ -1,0 +1,90 @@
+================================================================================
+GUIA DO DESENVOLVEDOR: APP_IA.PY
+================================================================================
+
+1. PROPÓSITO DO ARQUIVO
+--------------------------------------------------------------------------------
+O arquivo `app_ia.py` é uma versão extremamente compactada e otimizada do 
+`app.py`. Ele foi criado especificamente para ser lido por Agentes de IA. 
+
+O objetivo é manter 100% da LÓGICA DE NEGÓCIO, ROTEAMENTO DE ESTADO e ESTRUTURA 
+DE COMPONENTES, mas removendo toda a "gordura visual" (strings HTML, CSS inline, 
+textos explicativos longos e marcações de estilo). 
+
+Para um humano, ele pode parecer muito denso. Mas para uma IA, ele permite 
+entender a arquitetura completa do projeto VADER usando uma fração dos tokens, 
+evitando perda de contexto e reduzindo custos computacionais.
+
+2. ARQUITETURA E ROTEAMENTO (ENTRYPOINT)
+--------------------------------------------------------------------------------
+A aplicação é um Single Page Application (SPA) construído em Streamlit. 
+A navegação não é feita por URLs, mas sim pelo estado das variáveis na 
+sessão (st.session_state). 
+
+A função `main()` age como o controlador de rotas central:
+- Se `modo_app == "dtc"` -> Renderiza `render_dtc()`
+- Se `modo_app == "completa"` -> Renderiza `render_completa()`
+- Se `current_df` existir (e não houver modo) -> Renderiza `render_main()` (VADR)
+- Caso contrário -> Renderiza `render_landing()` (Página Inicial)
+
+3. MAPEAMENTO DAS FUNÇÕES PRINCIPAIS
+--------------------------------------------------------------------------------
+* ingest() e get_recent()
+  Lidam com a leitura dos arquivos RAW e conversão para DataFrame via DataLoader.
+  Fazem o uso intensivo de cache (@st.cache_data).
+
+* render_landing()
+  A página de seleção inicial dividida em 3 colunas:
+  1. VADR: Ingestão de telemetria CSV. Define `current_df`.
+  2. DTC: Ingestão de dumps TRIMM. Define `dtc_df` e `modo_app="dtc"`.
+  3. COMPLETA: Escaneia uma pasta de voo com vídeos/telemetria. Define 
+     `completa_map` e carrega todos os DFs. Define `modo_app="completa"`.
+
+* render_main(df)
+  A interface clássica de telemetria. Ordem de renderização:
+  1. Metadados do voo.
+  2. Seletor de Variáveis e Gráfico de Linha do Tempo (Plotly).
+  3. Slider Interativo de Tempo (controla o snapshot).
+  4. Horizonte Artificial e Painel de Alertas (AttitudeBox).
+  5. Cards de Subsistemas.
+  6. Painel inferior para troca de arquivo e limpeza de sessão.
+
+* render_dtc(df)
+  Apresenta os KPIs de falha do Trim Switch.
+  Aplica formatação condicional no dataframe (destacando triggers lógicos e 
+  interruptores de emergência). Exibe as tabelas de "Extrato Rápido" e "Histórico".
+
+* _convert_btn()
+  Função auxiliar (helper) criada exclusivamente no app_ia.py para evitar a 
+  repetição de 30 linhas de código no modo completo. Ela gerencia o acionamento 
+  do FFmpeg para rotacionar/converter vídeos MPG para MP4, individualmente ou em lote.
+
+* render_completa()
+  O Dashboard Integrado. Exibe 4 blocos:
+  1. Indicadores de disponibilidade de arquivos (VADR/DTC/Vídeos).
+  2. Colunas de Vídeo (EICAS rotacionado à esquerda, CHVC à direita), incluindo 
+     os botões de conversão FFmpeg gerados pelo helper.
+  3. Extrato resumido e tabelas do DTC.
+  4. Chamada para o `render_main(df)` para carregar a telemetria logo abaixo.
+
+4. GERENCIAMENTO DE ESTADO (st.session_state)
+--------------------------------------------------------------------------------
+Sempre que for dar manutenção neste arquivo ou no `app.py`, respeite as 
+seguintes chaves de estado (elas ditam o que é exibido na tela):
+
+- "current_df": DataFrame principal do voo (VADR).
+- "current_filename": Nome do arquivo carregado.
+- "dtc_df": DataFrame processado de falhas DTC.
+- "completa_map": Dicionário contendo os caminhos absolutos dos vídeos e DFs 
+  descobertos pelo local_scanner no modo Integrado.
+- "modo_app": Define em qual fluxo o usuário está.
+- "last_y_cols": Lista de variáveis atualmente plotadas no gráfico.
+
+5. REGRAS DE MANUTENÇÃO (ATENÇÃO HUMANO)
+--------------------------------------------------------------------------------
+1. NÃO adicione estilização (HTML/CSS) no `app_ia.py`. Se precisar melhorar o 
+   layout visual do VADER, edite o `app.py`.
+2. Se você adicionar uma NOVA LÓGICA DE NEGÓCIO, UMA NOVA VARIÁVEL DE ESTADO 
+   ou UMA NOVA ROTA (ex: Modo Manutenção) no `app.py`, lembre-se de replicar 
+   essa lógica no `app_ia.py` de forma enxuta para que a IA consiga compreender 
+   a mudança em manutenções futuras.
