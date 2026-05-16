@@ -287,7 +287,7 @@ def render_bottom_panel(df: pd.DataFrame) -> None:
 # Layout Principal (Análise)
 # -----------------------------------------------------------------------
 
-def render_main(df: pd.DataFrame) -> str | None:
+def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     """Monta o layout sincronizado de análise. Retorna y_col selecionado."""
 
     controller    = TimeController(df)
@@ -296,14 +296,15 @@ def render_main(df: pd.DataFrame) -> str | None:
     fault_columns = _LOADER.get_fault_columns(df)
 
     # Cabeçalho de Dados da Aeronave
-    metadata = df.attrs.get("metadata", {})
-    if metadata:
-        with st.container(border=True):
-            st.markdown("<p style='font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; text-align: center;'>✈️ DADOS DA AERONAVE</p>", unsafe_allow_html=True)
-            cols_meta = st.columns(len(metadata) if len(metadata) > 0 else 1)
-            for i, (key, val) in enumerate(metadata.items()):
-                with cols_meta[i % len(cols_meta)]:
-                    st.markdown(f"<p style='font-size: 0.75rem; text-align: center;'><span style='color: #888;'>{key}:</span> <br><b>{val}</b></p>", unsafe_allow_html=True)
+    if show_metadata:
+        metadata = df.attrs.get("metadata", {})
+        if metadata:
+            with st.container(border=True):
+                st.markdown("<p style='font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; text-align: center;'>✈️ DADOS DA AERONAVE</p>", unsafe_allow_html=True)
+                cols_meta = st.columns(len(metadata) if len(metadata) > 0 else 1)
+                for i, (key, val) in enumerate(metadata.items()):
+                    with cols_meta[i % len(cols_meta)]:
+                        st.markdown(f"<p style='font-size: 0.75rem; text-align: center;'><span style='color: #888;'>{key}:</span> <br><b>{val}</b></p>", unsafe_allow_html=True)
 
     time_idx = int(st.session_state.get(TimeController.SESSION_KEY, 0))
     snapshot = controller.get_snapshot(time_idx)
@@ -557,15 +558,12 @@ def render_completa() -> None:
         else:
             st.success("Sem falhas DTC detectadas.")
             
-    st.markdown("---")
-    st.markdown("#### 📈 Telemetria Sincronizada")
-    
     df_vadr = st.session_state.get("current_df")
     if df_vadr is not None:
-        st.info("*(O gráfico interativo TimelinePlotter entrará aqui para controlar o tempo global)*")
-        # Por enquanto vamos renderizar a interface de análise normal debaixo de tudo
-        render_main(df_vadr)
+        st.markdown("---")
+        render_main(df_vadr, show_metadata=False)
     else:
+        st.markdown("---")
         st.warning("Sem dados de telemetria VADR para plotar gráficos.")
         
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
