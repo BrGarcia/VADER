@@ -179,15 +179,52 @@ def render_landing() -> None:
                     else:
                         st.error("❌ Falha ao processar arquivos DTC. Verifique se são DMPs válidos.")
 
-    # ── MODO COMPLETO (Futuro) ──
+    # ── MODO COMPLETO (Ativo) ──
     with col3:
         with st.container(border=True):
             st.markdown("<h4 style='text-align: center; color: #2196F3; margin-bottom: 5px;'>🦅 Modo COMPLETA</h4>", unsafe_allow_html=True)
             st.markdown("<p style='font-size: 0.8rem; text-align: center; color: #aaa; min-height: 40px;'>Dashboard All-in-One Integrado (HUD, EICAS, CSV e DTC).</p>", unsafe_allow_html=True)
             st.markdown("---")
-            st.info("🚧 Em Desenvolvimento")
-            st.markdown("<div style='height: 45px;'></div>", unsafe_allow_html=True)
-            st.button("▶  INICIAR COMPLETA", disabled=True, use_container_width=True, key="btn_completa_disabled")
+            
+            from src.utils.local_scanner import get_available_flights, scan_flight_folder
+            voos = get_available_flights()
+            
+            if not voos:
+                st.markdown("<p style='font-size: 0.72rem; text-align: center; color: #888;'>Pasta 'Arquivos_para_analise/' vazia.</p>", unsafe_allow_html=True)
+                st.button("▶  INICIAR COMPLETA", disabled=True, use_container_width=True, key="btn_completa_disabled")
+            else:
+                st.markdown("<p style='font-size: 0.72rem; font-weight: bold; margin-bottom: 0px; text-align: center;'>📁 SELECIONE O VOO</p>", unsafe_allow_html=True)
+                voo_selecionado = st.selectbox(
+                    "Voo Local",
+                    options=voos,
+                    label_visibility="collapsed",
+                    key="landing_completa_select"
+                )
+                
+                st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+                iniciar_completa = st.button("▶  INICIAR COMPLETA", type="primary", use_container_width=True, key="btn_completa_start")
+                
+                if iniciar_completa:
+                    with st.spinner("Escaneando diretório e carregando módulos..."):
+                        mapeamento = scan_flight_folder(voo_selecionado)
+                        st.session_state.completa_map = mapeamento
+                        
+                        # Ingestão de VADR
+                        if mapeamento.get("vadr_csv_path"):
+                            df_vadr = _LOADER.ingest(str(mapeamento["vadr_csv_path"]))
+                            st.session_state.current_df = df_vadr
+                            st.session_state.current_filename = mapeamento["vadr_csv_path"].name
+                        
+                        # Ingestão de DTC
+                        if mapeamento.get("dtc_files_paths"):
+                            from src.data.dtc_parser import DtcParser
+                            # Se os DMPs estiverem na pasta DTC, ou na raiz
+                            dtc_pasta = str(mapeamento["dtc_files_paths"][0].parent)
+                            df_dtc = DtcParser.processar_diretorio(dtc_pasta)
+                            st.session_state.dtc_df = df_dtc
+                            
+                        st.session_state.modo_app = "completa"
+                        st.rerun()
 
 
 # -----------------------------------------------------------------------
@@ -438,6 +475,73 @@ def render_dtc(df: pd.DataFrame) -> None:
 
 
 # -----------------------------------------------------------------------
+# Layout COMPLETA (Dashboard Integrado)
+# -----------------------------------------------------------------------
+
+def render_completa() -> None:
+    """Monta o esqueleto do Dashboard Integrado All-In-One."""
+    st.markdown("<h2 style='text-align: center; color: #2196F3;'>🦅 Dashboard Integrado (All-In-One)</h2>", unsafe_allow_html=True)
+    
+    mapeamento = st.session_state.get("completa_map", {})
+    
+    # Barra de Ferramentas / Status
+    with st.container(border=True):
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Telemetria (VADR)", "✅ OK" if mapeamento.get("vadr_csv_path") else "❌ Ausente")
+        c2.metric("Falhas (DTC)", f"✅ {len(mapeamento.get('dtc_files_paths', []))} arq." if mapeamento.get("dtc_files_paths") else "❌ Ausente")
+        c3.metric("Vídeo HUD (CHVC)", "✅ OK" if mapeamento.get("chvc_video_path") else "❌ Ausente")
+        c4.metric("Vídeo MFD (EICAS)", "✅ OK" if mapeamento.get("eicas_video_path") else "❌ Ausente")
+        
+    st.markdown("---")
+    
+    # Grid de Vídeos e DTC
+    col_vid1, col_vid2, col_dtc = st.columns([2, 2, 1], gap="medium")
+    
+    with col_vid1:
+        st.markdown("#### 🎥 EICAS")
+        if mapeamento.get("eicas_video_path"):
+            st.info(f"Vídeo detectado: {mapeamento['eicas_video_path'].name}\n\n*(Player HTML5 será injetado aqui na Fase 4)*")
+        else:
+            st.warning("Sem gravação do EICAS")
+            
+    with col_vid2:
+        st.markdown("#### 🎥 CHVC (HUD)")
+        if mapeamento.get("chvc_video_path"):
+            st.info(f"Vídeo detectado: {mapeamento['chvc_video_path'].name}\n\n*(Player HTML5 será injetado aqui na Fase 4)*")
+        else:
+            st.warning("Sem gravação do HUD")
+            
+    with col_dtc:
+        st.markdown("#### 🛠️ Alertas DTC")
+        df_dtc = st.session_state.get("dtc_df")
+        if df_dtc is not None and not df_dtc.empty:
+            meta = df_dtc.attrs.get("metadata", {})
+            st.error(f"**Aileron:** {meta.get('Disparos Aileron', 0)}")
+            st.error(f"**Elevator:** {meta.get('Disparos Elevator', 0)}")
+        else:
+            st.success("Sem falhas detectadas ou dados DTC ausentes.")
+            
+    st.markdown("---")
+    st.markdown("#### 📈 Telemetria Sincronizada")
+    
+    df_vadr = st.session_state.get("current_df")
+    if df_vadr is not None:
+        st.info("*(O gráfico interativo TimelinePlotter entrará aqui para controlar o tempo global)*")
+        # Por enquanto vamos renderizar a interface de análise normal debaixo de tudo
+        render_main(df_vadr)
+    else:
+        st.warning("Sem dados de telemetria VADR para plotar gráficos.")
+        
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    if st.button("🔄  ENCERRAR INSPEÇÃO", use_container_width=True):
+        st.session_state.pop("completa_map", None)
+        st.session_state.pop("dtc_df", None)
+        st.session_state.pop("current_df", None)
+        st.session_state.modo_app = None
+        st.rerun()
+
+
+# -----------------------------------------------------------------------
 # Entrypoint
 # -----------------------------------------------------------------------
 
@@ -452,7 +556,9 @@ def main() -> None:
         else:
             st.session_state.modo_app = None
             st.rerun()
-    elif df_cached is not None:
+    elif modo == "completa":
+        render_completa()
+    elif df_cached is not None and modo != "completa":
         # ── Página de Análise VADR ──
         render_main(df_cached)
     else:
