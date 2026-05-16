@@ -309,12 +309,6 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     time_idx = int(st.session_state.get(TimeController.SESSION_KEY, 0))
     snapshot = controller.get_snapshot(time_idx)
 
-    # Atitude e Dados Críticos
-    st.markdown("#### ✈️ Atitude e Dados Críticos")
-    attitude_box.render(snapshot, fault_columns)
-
-    st.markdown("---")
-
     # ── Análise Temporal: título + seletor de variáveis inline ──
     numeric_cols = _LOADER.get_numeric_columns(df)
 
@@ -366,6 +360,12 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
 
     # Slider de Tempo
     controller.render_slider()
+
+    st.markdown("---")
+
+    # Atitude e Dados Críticos
+    st.markdown("#### ✈️ Atitude e Dados Críticos")
+    attitude_box.render(snapshot, fault_columns)
 
     # Cards de Subsistemas
     st.markdown("#### 🔧 Subsistemas")
