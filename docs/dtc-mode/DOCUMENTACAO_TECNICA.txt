@@ -1,0 +1,101 @@
+================================================================================
+DOCUMENTAÇÃO TÉCNICA E ARQUITETURA - CONVERSOR TRIMM & VADR
+================================================================================
+
+Este documento é destinado a desenvolvedores e engenheiros de software que 
+precisam manter, entender ou estender o script 'conversor.py'.
+
+--------------------------------------------------------------------------------
+1. ARQUITETURA GERAL
+--------------------------------------------------------------------------------
+O script foi desenhado com uma arquitetura procedural modular. Ele atua como um 
+"crawler" de diretórios (processamento em lote), entrando em subpastas a partir 
+de seu diretório raiz de execução.
+
+LINGUAGEM: Python 3.x
+DEPENDÊNCIAS PRINCIPAIS:
+- pandas: Usado extensivamente para ingestão, vetorização matemática (cálculo de 
+  threshold e deltas) e exportação inicial (CSV/Excel).
+- openpyxl: Usado para manipulação do DOM do Excel pós-exportação (congelamento 
+  de painéis, formatação condicional, redimensionamento de colunas).
+- pathlib (nativo): Usado para manipulação de caminhos cross-platform (Win/Mac/Linux).
+- csv (nativo): Usado no VADR para bypassar o parser estrito do Pandas.
+
+--------------------------------------------------------------------------------
+2. FLUXO DE EXECUÇÃO PRINCIPAL (def main)
+--------------------------------------------------------------------------------
+1. Escaneamento: O main() lista todos os diretórios filhos do local atual. 
+   Ele ignora pastas ocultas (startswith '.') e a pasta 'pacotes_offline'.
+2. Trava de Idempotência: Se o nome do diretório já contiver "_SEM_DISPARO" ou 
+   "_SUSPEITA_DISPARO", o script pula o diretório (evitando loops ou reprocessamento).
+3. Chamada de Processamento: Para cada pasta válida, chama `processar_subpasta()`.
+
+--------------------------------------------------------------------------------
+3. DESCRIÇÃO DAS FUNÇÕES CORE
+--------------------------------------------------------------------------------
+
+>> ler_arquivo_dmp(caminho_arquivo)
+- Input: Path de um arquivo TRIMM*.DMP.
+- Lógica: O arquivo tem extensão DMP mas é um CSV separado por ponto-e-vírgula (;).
+  O pandas lê mapeando para um array hardcoded de 'colunas_originais'.
+  Tratamento: O último ';' de cada linha gera uma coluna inútil que é dropada.
+- Retorno: DataFrame Pandas com uma nova coluna [0] indicando o arquivo de origem.
+
+>> processar_e_consolidar(lista_dfs)
+- Input: Lista de DataFrames (um para cada arquivo DMP lido).
+- Lógica: Concatena tudo.
+  * Coluna Hora: Converte a coluna 'UTC' (que é milissegundos do dia) para o 
+    formato HH:MM:SS.000.
+  * Threshold: Captura o tempo da linha 0 e linha 1, subtrai e multiplica por 2. 
+    Este é o valor base de tolerância temporal do gravador.
+  * Testes (Aileron_Test / Elevator_Test): Usa operações vetorizadas do pandas 
+    (shift(-1)) para comparar a linha N com a linha N+1. 
+    Condição para Flag 1: (Tempo N+1 - Tempo N > Threshold) AND (Posição N - Posição N+1 > 1).
+- Retorno: DataFrame final contendo as novas flags binárias. O threshold é salvo 
+  no df.attrs para fácil acesso.
+
+>> aplicar_formatacao_excel(caminho_xlsx, threshold_ms, df_consolidado)
+- Input: Path do XLSX gerado pelo Pandas, o valor do threshold e o DF consolidado.
+- Lógica: Reabre o Excel com OpenPyXL. Insere 5 linhas em branco no topo.
+  A função interna 'desenhar_bloco' é responsável por buscar os índices onde 
+  os testes deram '1' e espelhar as linhas de erro (e as linhas subsequentes) 
+  no cabeçalho superior (Copia o comportamento da macro VBA 'TrimTimeExtraction').
+  Aplica conditional_formatting para pintar de vermelho os valores '1' e 'T'.
+
+>> gerar_relatorio_sintese(...)
+- Lógica: Cria um dataframe de apenas 1 linha contendo as sumarizações (Totais, 
+  arquivos, e o master-flag de atuação) e exporta como o arquivo '01_Report'.
+
+>> processar_vadr(diretorio, prefixo)
+- Input: Diretório alvo e prefixo padronizado.
+- Lógica: Busca por arquivos '*Mishap Time History Data Set.csv'.
+  * Importante: O VADR não é lido com Pandas porque ele possui um cabeçalho 
+    (linhas 1 a 9) com menos colunas que o corpo de dados, o que quebra o parser.
+  * Solução: O arquivo é lido iterativamente com o módulo nativo 'csv' do Python 
+    e escrito diretamente no objeto Worksheet do OpenPyXL.
+  * Ocultação: O script itera sobre uma lista hardcoded de colunas e oculta as 
+    irrelevantes para a análise padrão.
+
+--------------------------------------------------------------------------------
+4. COMO ESTENDER OU MODIFICAR O CÓDIGO
+--------------------------------------------------------------------------------
+
+CENÁRIO A: Adicionar novas regras matemáticas de detecção no TRIMM
+- Onde alterar: Vá na função 'processar_e_consolidar()'.
+- Como: Logo abaixo das declarações de 'condicao_aileron', crie sua nova condição 
+  usando o 'shift(-1)' do pandas e adicione a nova coluna no df_final. 
+  Ex: df_final["Rudder_Test"] = ...
+
+CENÁRIO B: Ocultar ou Exibir colunas diferentes no arquivo VADR
+- Onde alterar: Vá na função 'processar_vadr()'.
+- Como: Existe uma lista chamada 'colunas_ocultas' contendo as letras das colunas 
+  ('D', 'E', 'F'...) e chamadas à função 'esconder_intervalo()'. Basta adicionar 
+  ou remover as letras dessas variáveis.
+
+CENÁRIO C: Alterar a formatação visual do Excel (Cores)
+- Onde alterar: Em 'aplicar_formatacao_excel()'.
+- Como: Modifique os objetos 'PatternFill' e 'Font' definidos nas variáveis 
+  'red_fill' e 'red_font'. As cores usam padrão Hexadecimal ARGB.
+
+================================================================================
+Fim da Documentação.
