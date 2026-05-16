@@ -55,19 +55,21 @@ Como as gravações iniciam em momentos distintos, é impossível dar "Play" e t
     *   Ao achar o ponto, o usuário clica em "Travar Sincronia". O sistema salva esse *offset* (ex: Vídeo 1 começou +12.5s depois do CSV) em um arquivo de configuração (ex: `sync.json` dentro da pasta `5941_130526`).
 3.  **Reprodução Sincronizada:** Quando o usuário der Play no Relógio Mestre, o sistema manda o comando de play para os vídeos aplicando o *offset* salvo.
 
-## 6. Reaproveitamento do Código Legado (VADER)
-*   A lógica de extração e formatação do CSV já existente no VADER será isolada em uma classe ou função independente (ex: `VadrParser`).
-*   Esse parser apenas entregará os dados em um formato que o novo Front-end de visualização consiga consumir (JSON ou Arrays de tempo/valor).
+## 6. Reaproveitamento e Modularidade do Código (Stack Atual)
+O projeto consolidou-se utilizando **Python + Streamlit**. Com isso, o ecossistema de ingestão de dados foi refatorado para funcionar como módulos independentes:
+*   **VADR (`src/data/data_loader.py`):** Lógica de ingestão clássica de CSV, extraindo metadados e persistindo cache colunar (Parquet).
+*   **DTC (`src/data/dtc_parser.py`):** Lógica de ingestão e consolidação de arquivos binários de falha (`TRIMM.DMP`), já adaptada para calcular *thresholds* e flags de atuação não comandada.
+O Frontend deve apenas consultar essas classes; ele não deve processar regras de negócio.
 
 ## 7. Estratégia da Página Inicial (Landing Page)
-Para manter a compatibilidade com o sistema atual e permitir a evolução gradual (DTC e ALL-IN-ONE), a página inicial (Landing Page) deve atuar como um **Hub/Launchpad de Módulos**.
-*   **Design em Cards:** A interface inicial apresentará grandes "Cards" (cartões) interativos, onde cada um representa um modo de operação isolado.
-    *   **Card 1: Modo VADR (Atual):** Mantém o fluxo clássico. O usuário faz upload ou seleciona apenas o CSV e a interface funciona exatamente como o VADER de hoje.
-    *   **Card 2: Modo DTC (Futuro):** Direcionará para a interface focada apenas em leitura e análise de falhas/dados brutos extraídos do `.DMP`.
-    *   **Card 3: Modo COMPLETO (Inspetoria/All-In-One):** Exigirá a seleção da pasta "MATRICULA_DATA" e abrirá o novo dashboard que integra Vídeos + Gráficos (descrito neste documento).
-*   **Vantagem dessa abordagem:** Impede que o código de um modo interfira no outro. O backend saberá exatamente qual "rota" ou "serviço" instanciar com base no card selecionado.
+A Landing Page atua como um **Hub de Módulos (Cards)**.
+*   **Card 1: Modo VADR (Atual):** Operação via *Upload* em memória ou seleção de histórico de CSV. Mantém a análise focada em gráficos.
+*   **Card 2: Modo DTC (Ativo):** Operação via *Upload* em memória de múltiplos arquivos `.DMP`. Exibe o painel focado em sumarização de falhas matemáticas nos atuadores.
+*   **Card 3: Modo COMPLETO (Inspetoria/All-In-One):** 
+    *   Como vídeos de voo são extremamente grandes, **não usaremos upload via navegador**.
+    *   A interface fará um *Scan Local* na pasta raiz predefinida (ex: `VADER/Arquivos_para_analise/`).
+    *   O usuário selecionará a pasta do voo (ex: `5941_130526`) através de um Dropdown.
+    *   O sistema inspecionará silenciosamente as subpastas (VADR, DTC, EICAS, CHVC), acionará os *parsers* respectivos para dados suportados, e repassará os caminhos absolutos dos vídeos para o renderizador de mídia.
 
-## Próximos Passos (Para o Plano de Implementação)
-1.  Definir o Stack Tecnológico para essa interface visual (Python com PyQt/PySide? Web com HTML/JS + Backend Python? Streamlit/Dash?).
-2.  Mapear a estrutura atual do código do VADER para extrair o leitor de CSV.
-3.  Definir como será feita a leitura dos arquivos binários `.DMP` do DTC (se já existe código para isso ou se precisaremos criar).
+## Próximos Passos (Plano de Implementação)
+O foco agora se desloca 100% para a criação do Layout Sincronizado do "Modo COMPLETA", detalhado no `plano_implementacao_completo.md`.
