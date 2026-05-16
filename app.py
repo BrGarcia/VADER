@@ -496,7 +496,7 @@ def render_completa() -> None:
     st.markdown("---")
     
     # Grid de Vídeos
-    col_vid1, col_vid2 = st.columns(2, gap="medium")
+    col_vid1, col_vid2 = st.columns([3, 5], gap="medium")
     
     with col_vid1:
         st.markdown("#### 🎥 EICAS (MFD)")
