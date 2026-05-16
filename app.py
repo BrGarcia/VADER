@@ -501,12 +501,24 @@ def render_completa() -> None:
         st.markdown("#### 🎥 EICAS (MFD)")
         vids_eicas = mapeamento.get("eicas_video_paths", [])
         if vids_eicas:
-            # Seletor de fragmento
             opcoes_eicas = {f.name: str(f) for f in vids_eicas}
             frag_eicas = st.selectbox("Fragmento EICAS", options=list(opcoes_eicas.keys()), label_visibility="collapsed")
             if frag_eicas:
-                st.video(opcoes_eicas[frag_eicas])
-                st.info("Nota: A rotação visual 90° e suporte a codec MPG dependem do navegador local.")
+                video_path = opcoes_eicas[frag_eicas]
+                if video_path.lower().endswith(('.mpg', '.mpeg')):
+                    st.warning("⚠️ Formato MPG incompatível com o navegador.")
+                    if st.button("Converter EICAS para MP4 (Rotacionar 90º)", key="btn_conv_eicas"):
+                        from src.utils.video_converter import convert_video
+                        from pathlib import Path
+                        out_path = Path(video_path).with_suffix('.mp4')
+                        with st.spinner("Convertendo vídeo... Isso levará alguns minutos. Aguarde..."):
+                            sucesso = convert_video(video_path, out_path, rotate=True)
+                        if sucesso:
+                            st.success("Conversão concluída! Feche a inspeção e abra novamente.")
+                        else:
+                            st.error("Falha. Verifique se o tools/ffmpeg.exe está na pasta.")
+                else:
+                    st.video(video_path)
         else:
             st.warning("Sem gravação do EICAS")
             
@@ -517,7 +529,21 @@ def render_completa() -> None:
             opcoes_chvc = {f.name: str(f) for f in vids_chvc}
             frag_chvc = st.selectbox("Fragmento HUD", options=list(opcoes_chvc.keys()), label_visibility="collapsed")
             if frag_chvc:
-                st.video(opcoes_chvc[frag_chvc])
+                video_path = opcoes_chvc[frag_chvc]
+                if video_path.lower().endswith(('.mpg', '.mpeg')):
+                    st.warning("⚠️ Formato MPG incompatível com o navegador.")
+                    if st.button("Converter HUD para MP4", key="btn_conv_chvc"):
+                        from src.utils.video_converter import convert_video
+                        from pathlib import Path
+                        out_path = Path(video_path).with_suffix('.mp4')
+                        with st.spinner("Convertendo vídeo... Isso levará alguns minutos. Aguarde..."):
+                            sucesso = convert_video(video_path, out_path, rotate=False)
+                        if sucesso:
+                            st.success("Conversão concluída! Feche a inspeção e abra novamente.")
+                        else:
+                            st.error("Falha. Verifique se o tools/ffmpeg.exe está na pasta.")
+                else:
+                    st.video(video_path)
         else:
             st.warning("Sem gravação do HUD")
             

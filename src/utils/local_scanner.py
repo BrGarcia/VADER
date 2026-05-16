@@ -45,23 +45,41 @@ def scan_flight_folder(folder_name: str) -> Dict[str, object]:
     
     result["dtc_files_paths"] = [f.absolute() for f in sorted(dtc_files)]
     
+    def _filter_best_videos(video_list: list[Path]) -> list[Path]:
+        """Agrupa os vídeos pelo nome. Se houver .mp4 e .mpg do mesmo vídeo, retorna apenas o .mp4."""
+        basenames = {}
+        for v in video_list:
+            base = v.stem
+            if base not in basenames:
+                basenames[base] = []
+            basenames[base].append(v)
+            
+        best_paths = []
+        for base, paths in basenames.items():
+            mp4_path = next((p for p in paths if p.suffix.lower() == ".mp4"), None)
+            if mp4_path:
+                best_paths.append(mp4_path)
+            else:
+                best_paths.append(paths[0])
+        return sorted(best_paths)
+
     # Busca vídeos EICAS e CHVC
     video_exts = ("*.mp4", "*.MP4", "*.avi", "*.AVI", "*.mkv", "*.mov", "*.mpg", "*.MPG", "*.mpeg", "*.MPEG")
     
     eicas_dir = flight_dir / "EICAS"
     if eicas_dir.exists():
+        vids = []
         for ext in video_exts:
-            vids = list(eicas_dir.glob(ext))
-            if vids:
-                result["eicas_video_paths"] = [v.absolute() for v in sorted(vids)]
-                break
+            vids.extend(list(eicas_dir.glob(ext)))
+        if vids:
+            result["eicas_video_paths"] = _filter_best_videos([v.absolute() for v in vids])
                 
     chvc_dir = flight_dir / "CHVC"
     if chvc_dir.exists():
+        vids = []
         for ext in video_exts:
-            vids = list(chvc_dir.glob(ext))
-            if vids:
-                result["chvc_video_paths"] = [v.absolute() for v in sorted(vids)]
-                break
+            vids.extend(list(chvc_dir.glob(ext)))
+        if vids:
+            result["chvc_video_paths"] = _filter_best_videos([v.absolute() for v in vids])
                 
     return result
