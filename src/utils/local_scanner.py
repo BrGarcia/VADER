@@ -46,7 +46,7 @@ def scan_flight_folder(folder_name: str) -> Dict[str, object]:
     result["dtc_files_paths"] = [f.absolute() for f in sorted(dtc_files)]
     
     # Busca vídeos EICAS e CHVC
-    video_exts = ("*.mp4", "*.avi", "*.mkv", "*.mov")
+    video_exts = ("*.mp4", "*.MP4", "*.avi", "*.AVI", "*.mkv", "*.mov", "*.mpg", "*.MPG", "*.mpeg", "*.MPEG")
     
     eicas_dir = flight_dir / "EICAS"
     if eicas_dir.exists():
