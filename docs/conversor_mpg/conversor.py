@@ -98,11 +98,14 @@ def main():
         print(f" - {f.name}")
         
     print("\nOpções de processamento:")
-    print("1. Converter normalmente (Ideal para HUD)")
-    print("2. Converter e rotacionar 90º à direita (Ideal para EICAS)")
+    print("1. Converter normalmente (Cores Originais)")
+    print("2. Converter e rotacionar 90º à direita (Para EICAS)")
+    print("3. Converter para Escala de Cinza (Ideal para HUD - reduz manchas de cor)")
+    print("4. Converter, rotacionar 90º E aplicar Escala de Cinza")
     
-    opcao = input("\nEscolha uma opção [1/2]: ").strip()
-    rotacionar = (opcao == "2")
+    opcao = input("\nEscolha uma opção [1/2/3/4]: ").strip()
+    rotacionar = (opcao in ["2", "4"])
+    escala_cinza = (opcao in ["3", "4"])
 
     nome_saida = input("\nDigite o nome desejado para o arquivo final (sem o .mp4) [Padrão: video_final]: ").strip()
     if not nome_saida:
@@ -150,14 +153,53 @@ def main():
         "-y",
         "-i", str(output_mpg),
         "-c:v", "libx264",
+        
+        # =====================================================================
+        # CONFIGURAÇÕES DE QUALIDADE E VELOCIDADE (Ajuste conforme a necessidade)
+        # 
+        # -preset: Define a velocidade do processo. Quanto mais lento, mais 
+        #          otimizado (menor) fica o tamanho do arquivo final.
+        #          Opções: ultrafast, superfast, veryfast, faster, fast, 
+        #                  medium, slow, slower, veryslow.
         "-preset", "fast",
+        
+        # -crf: (Constant Rate Factor) Define a QUALIDADE VISUAL do vídeo.
+        #       Escala de 0 a 51.
+        #       18 = Qualidade Visualmente Sem Perdas (Arquivo grande)
+        #       23 = Padrão nativo do FFmpeg (Ótima qualidade)
+        #       28 = Excelente para web e Streamlit (Tamanho bem reduzido)
+        #       35+ = Vídeo começa a ficar borrado/pixelado
         "-crf", "28",
+        # =====================================================================
+        
         "-c:a", "aac"
     ]
     
+    # =====================================================================
+    # APLICANDO FILTROS VISUAIS
+    # Se houver mais de um filtro (ex: rotacionar E cinza), o FFmpeg
+    # exige que sejam separados por vírgula na mesma flag '-vf'
+    # =====================================================================
+    
+    # [MODO DESENVOLVEDOR] Mude para True se quiser inverter as cores (Efeito Negativo).
+    # Útil para economizar tinta ao imprimir frames do HUD (fundo branco).
+    inverter_cores = False 
+    
+    filtros = []
     if rotacionar:
         print(" ↪ Aplicando rotação de 90º...")
-        cmd_convert.extend(["-vf", "transpose=1"])
+        filtros.append("transpose=1")
+    
+    if escala_cinza:
+        print(" ↪ Aplicando filtro de Escala de Cinza (P&B)...")
+        filtros.append("hue=s=0")
+        
+    if inverter_cores:
+        print(" ↪ Aplicando inversão de cores (Efeito Negativo)...")
+        filtros.append("negate")
+        
+    if filtros:
+        cmd_convert.extend(["-vf", ",".join(filtros)])
         
     cmd_convert.append(str(output_mp4))
     
