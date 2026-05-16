@@ -557,6 +557,17 @@ def render_completa() -> None:
         else:
             st.success("Sem falhas DTC detectadas.")
             
+    st.markdown("---")
+    st.markdown("#### 📈 Telemetria Sincronizada")
+    
+    df_vadr = st.session_state.get("current_df")
+    if df_vadr is not None:
+        st.info("*(O gráfico interativo TimelinePlotter entrará aqui para controlar o tempo global)*")
+        # Por enquanto vamos renderizar a interface de análise normal debaixo de tudo
+        render_main(df_vadr)
+    else:
+        st.warning("Sem dados de telemetria VADR para plotar gráficos.")
+        
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
     if st.button("🔄  ENCERRAR INSPEÇÃO", use_container_width=True):
         st.session_state.pop("completa_map", None)
