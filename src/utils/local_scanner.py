@@ -20,8 +20,8 @@ def scan_flight_folder(folder_name: str) -> Dict[str, object]:
     result = {
         "vadr_csv_path": None,
         "dtc_files_paths": [],
-        "eicas_video_path": None,
-        "chvc_video_path": None,
+        "eicas_video_paths": [],
+        "chvc_video_paths": [],
         "flight_dir": flight_dir.absolute()
     }
     
@@ -53,7 +53,7 @@ def scan_flight_folder(folder_name: str) -> Dict[str, object]:
         for ext in video_exts:
             vids = list(eicas_dir.glob(ext))
             if vids:
-                result["eicas_video_path"] = vids[0].absolute()
+                result["eicas_video_paths"] = [v.absolute() for v in sorted(vids)]
                 break
                 
     chvc_dir = flight_dir / "CHVC"
@@ -61,7 +61,7 @@ def scan_flight_folder(folder_name: str) -> Dict[str, object]:
         for ext in video_exts:
             vids = list(chvc_dir.glob(ext))
             if vids:
-                result["chvc_video_path"] = vids[0].absolute()
+                result["chvc_video_paths"] = [v.absolute() for v in sorted(vids)]
                 break
                 
     return result

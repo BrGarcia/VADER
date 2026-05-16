@@ -489,8 +489,8 @@ def render_completa() -> None:
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Telemetria (VADR)", "✅ OK" if mapeamento.get("vadr_csv_path") else "❌ Ausente")
         c2.metric("Falhas (DTC)", f"✅ {len(mapeamento.get('dtc_files_paths', []))} arq." if mapeamento.get("dtc_files_paths") else "❌ Ausente")
-        c3.metric("Vídeo HUD (CHVC)", "✅ OK" if mapeamento.get("chvc_video_path") else "❌ Ausente")
-        c4.metric("Vídeo MFD (EICAS)", "✅ OK" if mapeamento.get("eicas_video_path") else "❌ Ausente")
+        c3.metric("Vídeo HUD (CHVC)", f"✅ {len(mapeamento.get('chvc_video_paths', []))} arq." if mapeamento.get("chvc_video_paths") else "❌ Ausente")
+        c4.metric("Vídeo MFD (EICAS)", f"✅ {len(mapeamento.get('eicas_video_paths', []))} arq." if mapeamento.get("eicas_video_paths") else "❌ Ausente")
         
     st.markdown("---")
     
@@ -498,16 +498,26 @@ def render_completa() -> None:
     col_vid1, col_vid2, col_dtc = st.columns([2, 2, 1], gap="medium")
     
     with col_vid1:
-        st.markdown("#### 🎥 EICAS")
-        if mapeamento.get("eicas_video_path"):
-            st.info(f"Vídeo detectado: {mapeamento['eicas_video_path'].name}\n\n*(Player HTML5 será injetado aqui na Fase 4)*")
+        st.markdown("#### 🎥 EICAS (MFD)")
+        vids_eicas = mapeamento.get("eicas_video_paths", [])
+        if vids_eicas:
+            # Seletor de fragmento
+            opcoes_eicas = {f.name: str(f) for f in vids_eicas}
+            frag_eicas = st.selectbox("Fragmento EICAS", options=list(opcoes_eicas.keys()), label_visibility="collapsed")
+            if frag_eicas:
+                st.video(opcoes_eicas[frag_eicas])
+                st.info("Nota: A rotação visual 90° e suporte a codec MPG dependem do navegador local.")
         else:
             st.warning("Sem gravação do EICAS")
             
     with col_vid2:
         st.markdown("#### 🎥 CHVC (HUD)")
-        if mapeamento.get("chvc_video_path"):
-            st.info(f"Vídeo detectado: {mapeamento['chvc_video_path'].name}\n\n*(Player HTML5 será injetado aqui na Fase 4)*")
+        vids_chvc = mapeamento.get("chvc_video_paths", [])
+        if vids_chvc:
+            opcoes_chvc = {f.name: str(f) for f in vids_chvc}
+            frag_chvc = st.selectbox("Fragmento HUD", options=list(opcoes_chvc.keys()), label_visibility="collapsed")
+            if frag_chvc:
+                st.video(opcoes_chvc[frag_chvc])
         else:
             st.warning("Sem gravação do HUD")
             
@@ -519,7 +529,7 @@ def render_completa() -> None:
             st.error(f"**Aileron:** {meta.get('Disparos Aileron', 0)}")
             st.error(f"**Elevator:** {meta.get('Disparos Elevator', 0)}")
         else:
-            st.success("Sem falhas detectadas ou dados DTC ausentes.")
+            st.success("Sem falhas DTC detectadas.")
             
     st.markdown("---")
     st.markdown("#### 📈 Telemetria Sincronizada")
