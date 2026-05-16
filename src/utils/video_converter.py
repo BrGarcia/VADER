@@ -1,12 +1,25 @@
 import os
 import subprocess
+import shutil
 from pathlib import Path
 
-FFMPEG_PATH = Path("tools/ffmpeg.exe")
+def get_ffmpeg_path() -> str | None:
+    """Busca o ffmpeg no sistema operacional ou na pasta local tools/"""
+    # Tenta encontrar instalado nativamente (MacOS/Linux/Windows PATH)
+    system_ffmpeg = shutil.which("ffmpeg")
+    if system_ffmpeg:
+        return system_ffmpeg
+        
+    # Fallback para caso Windows offline (pasta tools/)
+    local_ffmpeg = Path("tools/ffmpeg.exe")
+    if local_ffmpeg.exists() and local_ffmpeg.is_file():
+        return str(local_ffmpeg.absolute())
+        
+    return None
 
 def is_ffmpeg_installed() -> bool:
-    """Verifica se o ffmpeg.exe está na pasta tools/"""
-    return FFMPEG_PATH.exists() and FFMPEG_PATH.is_file()
+    """Verifica se o ffmpeg foi encontrado."""
+    return get_ffmpeg_path() is not None
 
 def convert_video(input_path: str | Path, output_path: str | Path, rotate: bool = False) -> bool:
     """
@@ -14,11 +27,12 @@ def convert_video(input_path: str | Path, output_path: str | Path, rotate: bool 
     Se rotate for True, aplica rotação de 90 graus para a direita.
     Retorna True em caso de sucesso.
     """
-    if not is_ffmpeg_installed():
-        raise FileNotFoundError("ffmpeg.exe não encontrado na pasta tools/. Por favor, baixe e coloque o executável lá.")
+    ffmpeg_exec = get_ffmpeg_path()
+    if not ffmpeg_exec:
+        raise FileNotFoundError("FFmpeg não encontrado. Instale via Homebrew (MacOS) ou coloque em tools/ffmpeg.exe (Windows).")
         
     cmd = [
-        str(FFMPEG_PATH.absolute()),
+        ffmpeg_exec,
         "-y", # Sobrescreve sem perguntar
         "-i", str(input_path)
     ]
