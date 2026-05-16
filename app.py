@@ -495,8 +495,8 @@ def render_completa() -> None:
         
     st.markdown("---")
     
-    # Grid de Vídeos e DTC
-    col_vid1, col_vid2, col_dtc = st.columns([2, 2, 1], gap="medium")
+    # Grid de Vídeos
+    col_vid1, col_vid2 = st.columns(2, gap="medium")
     
     with col_vid1:
         st.markdown("#### 🎥 EICAS (MFD)")
@@ -548,15 +548,26 @@ def render_completa() -> None:
         else:
             st.warning("Sem gravação do HUD")
             
-    with col_dtc:
-        st.markdown("#### 🛠️ Alertas DTC")
-        df_dtc = st.session_state.get("dtc_df")
-        if df_dtc is not None and not df_dtc.empty:
-            meta = df_dtc.attrs.get("metadata", {})
-            st.error(f"**Aileron:** {meta.get('Disparos Aileron', 0)}")
-            st.error(f"**Elevator:** {meta.get('Disparos Elevator', 0)}")
+    st.markdown("---")
+    st.markdown("#### 🛠️ Alertas DTC (Pitch Trim Switch)")
+    df_dtc = st.session_state.get("dtc_df")
+    if df_dtc is not None and not df_dtc.empty:
+        meta = df_dtc.attrs.get("metadata", {})
+        v_a = meta.get('Disparos Aileron', 0)
+        v_e = meta.get('Disparos Elevator', 0)
+        
+        c_a, c_e = st.columns(2)
+        if v_a > 0:
+            c_a.error(f"**Aileron:** {v_a} disparos detectados")
         else:
-            st.success("Sem falhas DTC detectadas.")
+            c_a.success("**Aileron:** Nenhum disparo")
+            
+        if v_e > 0:
+            c_e.error(f"**Elevator:** {v_e} disparos detectados")
+        else:
+            c_e.success("**Elevator:** Nenhum disparo")
+    else:
+        st.info("Sem falhas DTC detectadas ou dados ausentes para este voo.")
             
     df_vadr = st.session_state.get("current_df")
     if df_vadr is not None:
