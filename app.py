@@ -143,15 +143,41 @@ def render_landing() -> None:
                     else:
                         st.error("❌ Falha ao carregar o arquivo do histórico.")
 
-    # ── MODO DTC (Futuro) ──
+    # ── MODO DTC (Ativo) ──
     with col2:
         with st.container(border=True):
             st.markdown("<h4 style='text-align: center; color: #FF9800; margin-bottom: 5px;'>🛠️ Modo DTC</h4>", unsafe_allow_html=True)
-            st.markdown("<p style='font-size: 0.8rem; text-align: center; color: #aaa; min-height: 40px;'>Leitura e decodificação de arquivos binários de falha (TRIMM.DMP).</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 0.8rem; text-align: center; color: #aaa; min-height: 40px;'>Leitura e decodificação de arquivos TRIMM.DMP.</p>", unsafe_allow_html=True)
             st.markdown("---")
-            st.info("🚧 Em Desenvolvimento")
-            st.markdown("<div style='height: 45px;'></div>", unsafe_allow_html=True)
-            st.button("▶  INICIAR DTC", disabled=True, use_container_width=True, key="btn_dtc_disabled")
+            
+            # Upload
+            st.markdown("<p style='font-size: 0.72rem; font-weight: bold; margin-bottom: 0px; text-align: center;'>⬆️ UPLOAD DMPs</p>", unsafe_allow_html=True)
+            uploaded_dmps = st.file_uploader(
+                "Upload DMP",
+                type=["dmp", "txt", "csv"], # dmp is standard, mas as vezes o OS não reconhece a ext nativamente
+                accept_multiple_files=True,
+                label_visibility="collapsed",
+                key="landing_dmp_uploader"
+            )
+            
+            st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+            if uploaded_dmps:
+                st.markdown(f"<p style='font-size: 0.72rem; text-align: center; color: #FF9800; margin-top: 2px;'>✅ {len(uploaded_dmps)} arquivos</p>", unsafe_allow_html=True)
+            else:
+                st.markdown("<p style='font-size: 0.72rem; text-align: center; color: #888; margin-top: 2px;'>Selecione os arquivos .DMP</p>", unsafe_allow_html=True)
+
+            iniciar_dtc = st.button("▶  INICIAR DTC", disabled=not uploaded_dmps, type="primary", use_container_width=True, key="btn_dtc_start")
+            
+            if iniciar_dtc:
+                from src.data.dtc_parser import DtcParser
+                with st.spinner("Processando arquivos TRIMM..."):
+                    df_dtc = DtcParser.ingest_files(uploaded_dmps)
+                    if not df_dtc.empty:
+                        st.session_state.dtc_df = df_dtc
+                        st.session_state.modo_app = "dtc"
+                        st.rerun()
+                    else:
+                        st.error("❌ Falha ao processar arquivos DTC. Verifique se são DMPs válidos.")
 
     # ── MODO COMPLETO (Futuro) ──
     with col3:
@@ -314,14 +340,72 @@ def render_main(df: pd.DataFrame) -> str | None:
 
 
 # -----------------------------------------------------------------------
+# Layout DTC (Módulo de Falhas TRIMM)
+# -----------------------------------------------------------------------
+
+def render_dtc(df: pd.DataFrame) -> None:
+    """Monta a visualização para os dados consolidados do DTC."""
+    st.markdown("<h2 style='text-align: center; color: #FF9800;'>🛠️ Análise DTC (Pitch Trim Switch)</h2>", unsafe_allow_html=True)
+    
+    meta = df.attrs.get("metadata", {})
+    
+    with st.container(border=True):
+        col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+        with col_kpi1:
+            st.metric("Total de Arquivos", meta.get("Total de Arquivos", 0))
+        with col_kpi2:
+            st.metric("Total de Registros", meta.get("Total de Registros", 0))
+        with col_kpi3:
+            st.metric("Threshold (ms)", meta.get("Threshold (ms)", 0))
+        with col_kpi4:
+            st.metric("Status Global", meta.get("Status", "N/A"))
+
+    st.markdown("---")
+    col_a, col_e = st.columns(2)
+    with col_a:
+        with st.container(border=True):
+            st.markdown("<h4 style='text-align: center;'>Aileron</h4>", unsafe_allow_html=True)
+            v_a = meta.get("Disparos Aileron", 0)
+            c_a = "#FF4B4B" if v_a > 0 else "#4CAF50"
+            st.markdown(f"<h1 style='text-align: center; color: {c_a};'>{v_a} disparos</h1>", unsafe_allow_html=True)
+        
+    with col_e:
+        with st.container(border=True):
+            st.markdown("<h4 style='text-align: center;'>Elevator</h4>", unsafe_allow_html=True)
+            v_e = meta.get("Disparos Elevator", 0)
+            c_e = "#FF4B4B" if v_e > 0 else "#4CAF50"
+            st.markdown(f"<h1 style='text-align: center; color: {c_e};'>{v_e} disparos</h1>", unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("### 📋 Dados Brutos Consolidados")
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    _, col_btn, _ = st.columns([1, 2, 1])
+    with col_btn:
+        if st.button("🔄  VOLTAR AO MENU INICIAL", use_container_width=True):
+            st.session_state.pop("dtc_df", None)
+            st.session_state.modo_app = None
+            st.rerun()
+
+
+# -----------------------------------------------------------------------
 # Entrypoint
 # -----------------------------------------------------------------------
 
 def main() -> None:
     df_cached = st.session_state.get("current_df")
+    modo = st.session_state.get("modo_app")
 
-    if df_cached is not None:
-        # ── Página de Análise ──
+    if modo == "dtc":
+        df_dtc = st.session_state.get("dtc_df")
+        if df_dtc is not None:
+            render_dtc(df_dtc)
+        else:
+            st.session_state.modo_app = None
+            st.rerun()
+    elif df_cached is not None:
+        # ── Página de Análise VADR ──
         render_main(df_cached)
     else:
         # ── Landing Page ──
