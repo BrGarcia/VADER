@@ -129,10 +129,14 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
         annotation_font=dict(color="#FF4B4B", size=11),
     )
 
-    st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True}, key=f"main_plot_{y_col}")
-
-    # Slider de Tempo
-    controller.render_slider()
+    # ── Renderização Centralizada (Gráfico e Controle) ──
+    # Diminuímos a largura horizontal do gráfico e da barra para forçá-los ao mesmo tamanho exato
+    _, col_centro, _ = st.columns([0.05, 0.9, 0.05])
+    
+    with col_centro:
+        st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True}, key=f"main_plot_{y_col}")
+        # Slider de Tempo logo abaixo do gráfico
+        controller.render_slider()
 
     st.markdown("---")
 

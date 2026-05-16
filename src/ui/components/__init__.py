@@ -141,42 +141,20 @@ class TimeController:
         current_idx: int = st.session_state.get(self.SESSION_KEY, 0)
         current_idx = max(0, min(current_idx, n - 1))
 
-        # Layout com Colunas: Play/Pause | Slider
-        col_btn, col_sld = st.columns([1, 15])
+        # ── Linha 1: Slider (Barra de Tempo) ──
+        idx: int = st.slider(
+            "Linha do Tempo",
+            min_value=0,
+            max_value=n - 1,
+            value=current_idx,
+            key=f"{self.SESSION_KEY}_widget",
+            label_visibility="collapsed",
+        )
+        if idx != current_idx:
+            st.session_state[self.SESSION_KEY] = idx
+            st.rerun()
 
-        with col_btn:
-            # Ícone dinâmico Play ou Pause
-            btn_label = "⏸" if st.session_state.is_playing else "▶"
-            if st.button(btn_label, use_container_width=True, key="play_pause_btn"):
-                st.session_state.is_playing = not st.session_state.is_playing
-                st.rerun()
-
-        with col_sld:
-            # Slider: a chave do widget agora é independente para evitar conflito de escrita
-            idx: int = st.slider(
-                "Linha do Tempo",
-                min_value=0,
-                max_value=n - 1,
-                value=current_idx,
-                key=f"{self.SESSION_KEY}_widget",
-                label_visibility="collapsed",
-            )
-            # Sincroniza o valor do slider de volta para o estado global
-            if idx != current_idx:
-                st.session_state[self.SESSION_KEY] = idx
-                st.rerun()
-
-        # Lógica de Reprodução Automática
-        if st.session_state.is_playing:
-            import time
-            if current_idx < n - 1:
-                st.session_state[self.SESSION_KEY] = current_idx + 1
-                time.sleep(0.05)
-                st.rerun()
-            else:
-                st.session_state.is_playing = False
-                st.rerun()
-
+        # ── Lógica de Reprodução Automática (Removida a pedido) ──
         return int(st.session_state[self.SESSION_KEY])
 
     def get_snapshot(self, time_index: int) -> pd.Series:
