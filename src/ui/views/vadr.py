@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import os
 import streamlit as st
 import pandas as pd
@@ -49,7 +50,8 @@ def render_bottom_panel(df: pd.DataFrame) -> None:
             n_rows = len(df)
             duration = df["TIME"].max() if "TIME" in df.columns else 0
             fname = st.session_state.get("current_filename", "arquivo")
-            st.markdown(f"<p style='font-size: 0.7rem; margin-bottom: 0px; text-align: center;'>📄 {fname[:24]}</p>", unsafe_allow_html=True)
+            fname_safe = html.escape(fname[:24])  # SEC-01: sanitiza contra XSS
+            st.markdown(f"<p style='font-size: 0.7rem; margin-bottom: 0px; text-align: center;'>📄 {fname_safe}</p>", unsafe_allow_html=True)
             st.markdown(f"<p style='font-size: 0.7rem; text-align: center;'>🔢 {n_rows:,} registros | ⏱ {duration:.1f}s</p>", unsafe_allow_html=True)
 
         # ── Botão Nova Análise ──

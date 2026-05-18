@@ -409,24 +409,6 @@ class EICASPanel:
             return (f"MWC CODE {code}", "caution")
         return ("", "normal")
 
-    def _collect_active_faults(
-        self, snapshot: pd.Series, fault_columns: list[str]
-    ) -> list[tuple[str, str, str]]:
-        """Varre as colunas MW* e retorna lista de (coluna, descrição, severidade) ativas."""
-        active = []
-        for col in fault_columns:
-            val = snapshot.get(col, 0)
-            try:
-                if float(val) == 1.0:
-                    desc, sev = FAULT_DESCRIPTIONS.get(
-                        col,
-                        (col.split("_", 1)[-1].replace("_", " "), "caution"),
-                    )
-                    active.append((col, desc, sev))
-            except Exception:
-                pass
-        return active
-
 
 # -----------------------------------------------------------------------
 # Cards de Subsistemas — Fase 2

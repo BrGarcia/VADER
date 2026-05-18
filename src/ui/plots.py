@@ -265,7 +265,7 @@ class TimelinePlotter:
                 hovertemplate=(
                     f"<b>⚠ FALHA: {short_name}</b><br>"
                     f"t=%{{x:.3f}} s<br>"
-                    f"{y_column}=%{{y}}<extra></extra>"
+                    f"{y_ref}=%{{y}}<extra></extra>"  # BUG-04: usa y_ref (str) em vez de y_column (pode ser list)
                 ),
             ))
 

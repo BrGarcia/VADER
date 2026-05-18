@@ -105,10 +105,11 @@ class DtcParser:
         df_final["TIME"] = (df_final["UTC"] - t_min) / 1000.0
         df_final["TIME_STR"] = horas_formatadas
         
-        # 2. Calcular Threshold_ms
+        # 2. Calcular Threshold_ms — BUG-07: usa mediana para robustez
         threshold_ms = 0
         if len(df_final) >= 2:
-            threshold_ms = (df_final["UTC"].iloc[1] - df_final["UTC"].iloc[0]) * 2
+            median_delta = df_final["UTC"].diff().dropna().median()
+            threshold_ms = int(median_delta * 2) if not pd.isna(median_delta) else 0
             
         # 3. Detectar Atuações Não Comandadas
         diff_utc = df_final["UTC"].shift(-1) - df_final["UTC"]

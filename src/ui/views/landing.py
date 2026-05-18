@@ -1,4 +1,6 @@
 import os
+import html
+from pathlib import PurePosixPath
 import streamlit as st
 import pandas as pd
 from src.data.data_loader import DataLoader
@@ -14,7 +16,9 @@ def _get_recent_files() -> list[str]:
 
 @st.cache_data(show_spinner="Processando telemetria...")
 def _ingest(file_bytes: bytes, filename: str) -> pd.DataFrame:
-    raw_path = os.path.join(DataLoader.RAW_DIR, filename)
+    # SEC-02: sanitiza filename para evitar path traversal
+    safe_name = PurePosixPath(filename).name
+    raw_path = os.path.join(DataLoader.RAW_DIR, safe_name)
     os.makedirs(DataLoader.RAW_DIR, exist_ok=True)
     os.makedirs(DataLoader.PROCESSED_DIR, exist_ok=True)
 
@@ -79,7 +83,8 @@ def render_landing() -> None:
 
             if arquivo_pronto:
                 nome = uploaded.name if uploaded else selected_recent
-                st.markdown(f"<p style='font-size: 0.72rem; text-align: center; color: #4CAF50; margin-top: 2px;'>✅ {nome}</p>", unsafe_allow_html=True)
+                nome_safe = html.escape(nome)  # SEC-01: sanitiza contra XSS
+                st.markdown(f"<p style='font-size: 0.72rem; text-align: center; color: #4CAF50; margin-top: 2px;'>✅ {nome_safe}</p>", unsafe_allow_html=True)
             else:
                 st.markdown("<p style='font-size: 0.72rem; text-align: center; color: #888; margin-top: 2px;'>Selecione um arquivo CSV.</p>", unsafe_allow_html=True)
 
