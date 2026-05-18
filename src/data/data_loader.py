@@ -156,6 +156,14 @@ class DataLoader:
         )
         # Limpa espaços em branco nos nomes das colunas
         df.columns = [c.strip() for c in df.columns]
+
+        # IMP-09: valida estrutura mínima do CSV
+        if "TIME" not in df.columns and "STIME" not in df.columns:
+            raise ValueError(
+                f"CSV inválido: coluna TIME ou STIME não encontrada. "
+                f"Colunas disponíveis: {list(df.columns)[:10]}"
+            )
+
         return df
 
     def _coerce_types(self, df: pd.DataFrame) -> pd.DataFrame:

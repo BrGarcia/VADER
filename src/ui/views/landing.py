@@ -4,6 +4,8 @@ from pathlib import PurePosixPath
 import streamlit as st
 import pandas as pd
 from src.data.data_loader import DataLoader
+from src.data.dtc_parser import DtcParser
+from src.utils.local_scanner import get_available_flights, scan_flight_folder
 
 _LOADER = DataLoader()
 
@@ -142,7 +144,6 @@ def render_landing() -> None:
             iniciar_dtc = st.button("▶  INICIAR DTC", disabled=not uploaded_dmps, type="primary", use_container_width=True, key="btn_dtc_start")
             
             if iniciar_dtc:
-                from src.data.dtc_parser import DtcParser
                 with st.spinner("Processando arquivos TRIMM..."):
                     df_dtc = DtcParser.ingest_files(uploaded_dmps)
                     if not df_dtc.empty:
@@ -159,7 +160,6 @@ def render_landing() -> None:
             st.markdown("<p style='font-size: 0.8rem; text-align: center; color: #aaa; min-height: 40px;'>Dashboard All-in-One Integrado (HUD, EICAS, CSV e DTC).</p>", unsafe_allow_html=True)
             st.markdown("---")
             
-            from src.utils.local_scanner import get_available_flights, scan_flight_folder
             voos = get_available_flights()
             
             if not voos:
@@ -190,7 +190,6 @@ def render_landing() -> None:
                         
                         # Ingestão de DTC
                         if mapeamento.get("dtc_files_paths"):
-                            from src.data.dtc_parser import DtcParser
                             # Se os DMPs estiverem na pasta DTC, ou na raiz
                             dtc_pasta = str(mapeamento["dtc_files_paths"][0].parent)
                             df_dtc = DtcParser.processar_diretorio(dtc_pasta)
