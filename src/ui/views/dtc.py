@@ -3,6 +3,9 @@ import pandas as pd
 
 def render_dtc(df: pd.DataFrame) -> None:
     """Monta a visualização para os dados consolidados do DTC."""
+    # Aumenta o limite de células para estilização do Pandas (fix StreamlitAPIException)
+    pd.set_option("styler.render.max_elements", 1_000_000)
+
     st.markdown("<h2 style='text-align: center; color: #FF9800;'>🛠️ Análise DTC (Pitch Trim Switch)</h2>", unsafe_allow_html=True)
     
     meta = df.attrs.get("metadata", {})
