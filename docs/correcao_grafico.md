@@ -1,10 +1,31 @@
 # Plano de Correção - Fluidez do Gráfico "Análise Temporal"
 
-**Data:** 2026-05-19  
+**Data de criação:** 2026-05-19  
 **Arquivos de referência:** `src/ui/views/vadr.py`, `src/ui/plots.py`, `src/ui/components/__init__.py`  
 **Sintoma:** Ao mover o slider de tempo, a aplicação demora visivelmente para atualizar, pois reconstrói e reenvia o gráfico Plotly completo, além de recalcular os painéis dependentes do instante selecionado.
 
 **Premissa de uso:** aplicação local/monousuário. Não é necessário projetar isolamento complexo entre múltiplos usuários ou sessões concorrentes.
+
+---
+
+## Status de Implementação
+
+> **✅ Fase A — CONCLUÍDA** em 2026-05-19  
+> Branch: `feature/correcao-fluidez-grafico-temporal`  
+> Commit: `9d423da` — _feat: correcao de fluidez do grafico Analise Temporal (Fase A)_  
+> Arquivos alterados: `data_loader.py`, `components/__init__.py`, `plots.py`, `landing.py`, `vadr.py`
+
+| Item | Status | Data |
+|------|--------|------|
+| A.1 - Remover `st.rerun()` manual do slider | ✅ Implementado | 2026-05-19 |
+| A.2 - Decimação de pontos (stride 6 000 pts) | ✅ Implementado | 2026-05-19 |
+| A.3 - Cachear gráfico base com `@st.cache_data` | ✅ Implementado | 2026-05-19 |
+| A.4 - Cursor fora do gráfico base (`deepcopy`) | ✅ Implementado | 2026-05-19 |
+| A.5 - Corrigir escala dos marcadores de falha | ✅ Implementado | 2026-05-19 |
+| A.6 - Modo Análise Básica / Análise Completa | ✅ Implementado | 2026-05-19 |
+| B.1 - Avaliar `@st.fragment` | ⏳ Pendente | — |
+| B.2 - Cursor via JS/relayout | ⏳ Pendente | — |
+| B.3 - Downsampling adaptativo por zoom | ⏳ Pendente | — |
 
 ---
 
@@ -89,12 +110,13 @@ As fases com `@st.fragment` ou JavaScript devem ficar para depois de medir o res
 
 ---
 
-## Fase A - Correção Recomendada
+## Fase A - Correção Recomendada ✅ CONCLUÍDA
 
-### A.1 - Remover `st.rerun()` manual do slider
+### A.1 - Remover `st.rerun()` manual do slider ✅
 
 **Arquivo:** `src/ui/components/__init__.py`  
-**Classe:** `TimeController`
+**Classe:** `TimeController`  
+**Status:** ✅ Implementado em 2026-05-19
 
 O slider já atualiza `st.session_state` e dispara rerun. A implementação deve evitar um segundo rerun explícito.
 
@@ -137,10 +159,11 @@ idx = st.slider(
 
 ---
 
-### A.2 - Decimar séries temporais antes do Plotly
+### A.2 - Decimar séries temporais antes do Plotly ✅
 
 **Arquivo:** `src/ui/plots.py`  
-**Método:** `TimelinePlotter.plot()`
+**Método:** `TimelinePlotter.plot()`  
+**Status:** ✅ Implementado em 2026-05-19 — `_downsample_frame()` com stride uniforme, `_MAX_TIMELINE_POINTS = 6_000`
 
 O Plotly não precisa receber todos os pontos para manter boa leitura visual em uma janela de 900-1400 px. Limitar cada série para algo entre `4_000` e `8_000` pontos reduz serialização, tráfego interno e custo de renderização no browser.
 
@@ -174,9 +197,10 @@ Para uma primeira correção, stride é suficiente. LTTB pode ser avaliado depoi
 
 ---
 
-### A.3 - Separar preparação de dados e construção do gráfico base
+### A.3 - Separar preparação de dados e construção do gráfico base ✅
 
-**Arquivos:** `src/ui/plots.py`, `src/ui/views/vadr.py`
+**Arquivos:** `src/ui/plots.py`, `src/ui/views/vadr.py`  
+**Status:** ✅ Implementado em 2026-05-19 — `build_base_figure()` com `@st.cache_data` em `vadr.py` (Opção 1)
 
 O ideal é cachear uma representação leve ou uma figura base sem cursor. Duas opções são aceitáveis:
 
@@ -231,9 +255,10 @@ Nesta opção, `file_key` deve representar o dataset atual. O DataFrame pode ser
 
 ---
 
-### A.4 - Manter cursor fora do gráfico base
+### A.4 - Manter cursor fora do gráfico base ✅
 
-**Arquivo:** `src/ui/views/vadr.py`
+**Arquivo:** `src/ui/views/vadr.py`  
+**Status:** ✅ Implementado em 2026-05-19 — `copy.deepcopy(base_fig)` antes de `add_vline()`
 
 O cursor temporal muda a cada movimento do slider; traces, faixas de fase e marcadores não. Portanto o cursor deve ser aplicado somente depois de obter o gráfico base cacheado.
 
@@ -253,10 +278,11 @@ Essa separação impede que o cursor contamine o cache da figura base.
 
 ---
 
-### A.5 - Corrigir escala dos marcadores de falha
+### A.5 - Corrigir escala dos marcadores de falha ✅
 
 **Arquivo:** `src/ui/plots.py`  
-**Método:** `TimelinePlotter.add_fault_markers()`
+**Método:** `TimelinePlotter.add_fault_markers()`  
+**Status:** ✅ Implementado em 2026-05-19 — marcadores normalizados 5–95 com valor real em `customdata` para hover
 
 Hoje as séries principais são normalizadas para a escala visual `5-95`, mas os marcadores de falha usam valores reais da variável de referência. Isso pode posicionar os marcadores fora da faixa visível ou desalinhados da curva.
 
@@ -282,9 +308,10 @@ hovertemplate=f"<b>FALHA: {short_name}</b><br>t=%{{x:.3f}} s<br>{y_ref}=%{{custo
 
 ---
 
-### A.6 - Adicionar modo Análise Básica / Análise Completa
+### A.6 - Adicionar modo Análise Básica / Análise Completa ✅
 
-**Arquivos prováveis:** `src/ui/views/landing.py`, `src/data/data_loader.py`, `src/ui/views/vadr.py`
+**Arquivos:** `src/ui/views/landing.py`, `src/data/data_loader.py`, `src/ui/views/vadr.py`  
+**Status:** ✅ Implementado em 2026-05-19 — `BASIC_ANALYSIS_COLUMNS`, `analysis_mode` em `ingest()`, Parquet separado por modo, seletor `st.radio` na landing page
 
 Adicionar na página de carregamento um seletor de modo:
 
@@ -495,16 +522,16 @@ Em uma versão futura, o gráfico pode renderizar uma versão reduzida para vis�
 
 ## Ordem de Implementação Recomendada
 
-| Prioridade | Item | Esforço | Ganho esperado |
-|------------|------|---------|----------------|
-| 1 | A.1 - Remover `st.rerun()` manual do slider | Baixo | Médio |
-| 2 | A.2 - Decimação de pontos | Baixo/Médio | Alto |
-| 3 | A.3 - Cachear/preparar gráfico base | Médio | Alto |
-| 4 | A.4 - Cursor fora do gráfico base | Baixo | Médio |
-| 5 | A.5 - Corrigir escala dos marcadores de falha | Baixo | Correção visual |
-| 6 | A.6 - Modo Análise Básica / Completa | Médio | Alto no carregamento |
-| 7 | B.1 - Avaliar `@st.fragment` | Médio | Variável |
-| 8 | B.2 - Cursor via JS/relayout | Alto | Muito alto |
+| Prioridade | Item | Esforço | Ganho esperado | Status |
+|------------|------|---------|----------------|--------|
+| 1 | A.1 - Remover `st.rerun()` manual do slider | Baixo | Médio | ✅ 2026-05-19 |
+| 2 | A.2 - Decimação de pontos | Baixo/Médio | Alto | ✅ 2026-05-19 |
+| 3 | A.3 - Cachear/preparar gráfico base | Médio | Alto | ✅ 2026-05-19 |
+| 4 | A.4 - Cursor fora do gráfico base | Baixo | Médio | ✅ 2026-05-19 |
+| 5 | A.5 - Corrigir escala dos marcadores de falha | Baixo | Correção visual | ✅ 2026-05-19 |
+| 6 | A.6 - Modo Análise Básica / Completa | Médio | Alto no carregamento | ✅ 2026-05-19 |
+| 7 | B.1 - Avaliar `@st.fragment` | Médio | Variável | ⏳ Pendente |
+| 8 | B.2 - Cursor via JS/relayout | Alto | Muito alto | ⏳ Pendente |
 
 ---
 
