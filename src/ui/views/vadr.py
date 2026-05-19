@@ -153,37 +153,26 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
         st.session_state.last_y_col = y_col
 
     # ── Configuração de Excedências (Highlight) ──
-    with st.expander("⚠️ Destacar Excedências (Exceedance Highlight)"):
-        col_exc1, col_exc2, col_exc3 = st.columns([2, 1, 1], gap="small")
-        with col_exc1:
-            exc_var = st.selectbox(
-                "Variável",
-                options=["Nenhuma"] + y_cols,
-                key="exc_var_select"
-            )
-        with col_exc2:
-            exc_op = st.selectbox(
-                "Operação",
-                options=[">", "<", ">=", "<=", "=="],
-                key="exc_op_select"
-            )
-        with col_exc3:
-            # Padrão inteligente: valor médio da variável se disponível
-            default_val = 0.0
-            if exc_var != "Nenhuma" and exc_var in df.columns:
-                try:
-                    default_val = float(df[exc_var].mean())
-                except Exception:
-                    pass
-            exc_val = st.number_input(
-                "Valor Limite",
-                value=default_val,
-                format="%.4f",
-                key="exc_val_input"
-            )
+    # Lemos os valores salvos no session_state para construir a exceedance_tuple antes do gráfico
+    exc_var = st.session_state.get("exc_var_select", "Nenhuma")
+    exc_op = st.session_state.get("exc_op_select", ">")
+
+    # Atualiza valor padrão do limite caso a variável tenha mudado
+    last_exc_var = st.session_state.get("last_exc_var_state", "Nenhuma")
+    if exc_var != last_exc_var:
+        st.session_state.last_exc_var_state = exc_var
+        default_val = 0.0
+        if exc_var != "Nenhuma" and exc_var in df.columns:
+            try:
+                default_val = float(df[exc_var].mean())
+            except Exception:
+                pass
+        st.session_state.exc_val_input = default_val
+
+    exc_val = st.session_state.get("exc_val_input", 0.0)
 
     exceedance_tuple = None
-    if exc_var != "Nenhuma":
+    if exc_var != "Nenhuma" and exc_var in y_cols:
         exceedance_tuple = (exc_var, exc_op, float(exc_val))
 
     label_vars = " · ".join(f"`{c}`" for c in y_cols)
@@ -199,6 +188,36 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     # ── Renderização Centralizada (Gráfico) ──
     # Renderizamos em largura total correspondendo aos cards e ao restante da página
     st.plotly_chart(base_fig, width="stretch", config={"scrollZoom": True}, key=f"main_plot_{y_col}")
+
+    # ── Configuração de Excedências (Highlight) ──
+    with st.expander("⚠️ Destacar Excedências (Exceedance Highlight)"):
+        col_exc1, col_exc2, col_exc3 = st.columns([2, 1, 1], gap="small")
+        with col_exc1:
+            st.selectbox(
+                "Variável",
+                options=["Nenhuma"] + y_cols,
+                key="exc_var_select"
+            )
+        with col_exc2:
+            st.selectbox(
+                "Operação",
+                options=[">", "<", ">=", "<=", "=="],
+                key="exc_op_select"
+            )
+        with col_exc3:
+            # Padrão inteligente: valor médio da variável se disponível
+            default_val = 0.0
+            if exc_var != "Nenhuma" and exc_var in df.columns:
+                try:
+                    default_val = float(df[exc_var].mean())
+                except Exception:
+                    pass
+            st.number_input(
+                "Valor Limite",
+                value=st.session_state.get("exc_val_input", default_val),
+                format="%.4f",
+                key="exc_val_input"
+            )
 
     st.markdown("---")
 
