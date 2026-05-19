@@ -11,6 +11,10 @@ import os
 import pandas as pd
 from pathlib import Path
 
+from src.utils.logger import get_logger
+
+_log = get_logger(__name__)
+
 class DtcParser:
     """Classe para leitura e processamento de arquivos TRIMM*.DMP do DTC."""
 
@@ -47,7 +51,7 @@ class DtcParser:
             df.insert(0, "Origem_Arquivo", caminho.name)
             return df
         except Exception as e:
-            print(f"Erro ao ler {caminho.name}: {e}")
+            _log.error("Erro ao ler %s: %s", caminho.name, e)
             return pd.DataFrame()
 
     @classmethod
@@ -80,7 +84,7 @@ class DtcParser:
                 if not df.empty:
                     lista_dfs.append(df)
             except Exception as e:
-                print(f"Erro ao ler arquivo em memória {uf.name}: {e}")
+                _log.error("Erro ao ler arquivo em memória %s: %s", uf.name, e)
                 
         return cls._consolidar(lista_dfs, len(uploaded_files))
 
@@ -105,10 +109,11 @@ class DtcParser:
         df_final["TIME"] = (df_final["UTC"] - t_min) / 1000.0
         df_final["TIME_STR"] = horas_formatadas
         
-        # 2. Calcular Threshold_ms
+        # 2. Calcular Threshold_ms — BUG-07: usa mediana para robustez
         threshold_ms = 0
         if len(df_final) >= 2:
-            threshold_ms = (df_final["UTC"].iloc[1] - df_final["UTC"].iloc[0]) * 2
+            median_delta = df_final["UTC"].diff().dropna().median()
+            threshold_ms = int(median_delta * 2) if not pd.isna(median_delta) else 0
             
         # 3. Detectar Atuações Não Comandadas
         diff_utc = df_final["UTC"].shift(-1) - df_final["UTC"]

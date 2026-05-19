@@ -1,7 +1,11 @@
 import os
+import html
+from pathlib import PurePosixPath
 import streamlit as st
 import pandas as pd
 from src.data.data_loader import DataLoader
+from src.data.dtc_parser import DtcParser
+from src.utils.local_scanner import get_available_flights, scan_flight_folder
 
 _LOADER = DataLoader()
 
@@ -14,7 +18,9 @@ def _get_recent_files() -> list[str]:
 
 @st.cache_data(show_spinner="Processando telemetria...")
 def _ingest(file_bytes: bytes, filename: str) -> pd.DataFrame:
-    raw_path = os.path.join(DataLoader.RAW_DIR, filename)
+    # SEC-02: sanitiza filename para evitar path traversal
+    safe_name = PurePosixPath(filename).name
+    raw_path = os.path.join(DataLoader.RAW_DIR, safe_name)
     os.makedirs(DataLoader.RAW_DIR, exist_ok=True)
     os.makedirs(DataLoader.PROCESSED_DIR, exist_ok=True)
 
@@ -79,7 +85,8 @@ def render_landing() -> None:
 
             if arquivo_pronto:
                 nome = uploaded.name if uploaded else selected_recent
-                st.markdown(f"<p style='font-size: 0.72rem; text-align: center; color: #4CAF50; margin-top: 2px;'>✅ {nome}</p>", unsafe_allow_html=True)
+                nome_safe = html.escape(nome)  # SEC-01: sanitiza contra XSS
+                st.markdown(f"<p style='font-size: 0.72rem; text-align: center; color: #4CAF50; margin-top: 2px;'>✅ {nome_safe}</p>", unsafe_allow_html=True)
             else:
                 st.markdown("<p style='font-size: 0.72rem; text-align: center; color: #888; margin-top: 2px;'>Selecione um arquivo CSV.</p>", unsafe_allow_html=True)
 
@@ -137,7 +144,6 @@ def render_landing() -> None:
             iniciar_dtc = st.button("▶  INICIAR DTC", disabled=not uploaded_dmps, type="primary", use_container_width=True, key="btn_dtc_start")
             
             if iniciar_dtc:
-                from src.data.dtc_parser import DtcParser
                 with st.spinner("Processando arquivos TRIMM..."):
                     df_dtc = DtcParser.ingest_files(uploaded_dmps)
                     if not df_dtc.empty:
@@ -154,7 +160,6 @@ def render_landing() -> None:
             st.markdown("<p style='font-size: 0.8rem; text-align: center; color: #aaa; min-height: 40px;'>Dashboard All-in-One Integrado (HUD, EICAS, CSV e DTC).</p>", unsafe_allow_html=True)
             st.markdown("---")
             
-            from src.utils.local_scanner import get_available_flights, scan_flight_folder
             voos = get_available_flights()
             
             if not voos:
@@ -185,7 +190,6 @@ def render_landing() -> None:
                         
                         # Ingestão de DTC
                         if mapeamento.get("dtc_files_paths"):
-                            from src.data.dtc_parser import DtcParser
                             # Se os DMPs estiverem na pasta DTC, ou na raiz
                             dtc_pasta = str(mapeamento["dtc_files_paths"][0].parent)
                             df_dtc = DtcParser.processar_diretorio(dtc_pasta)

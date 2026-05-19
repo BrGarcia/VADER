@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import os
 import streamlit as st
 import pandas as pd
@@ -10,6 +11,7 @@ from src.ui.components.flight_map import FlightMap
 from src.ui.views.landing import _get_recent_files, _LOADER
 
 _PLOTTER = TimelinePlotter()
+_FLIGHT_MAP = FlightMap()  # IMP-07: instanciado uma vez no nível de módulo
 
 def render_bottom_panel(df: pd.DataFrame) -> None:
     """Painel inferior: troca de arquivo, info e botão Nova Análise."""
@@ -49,7 +51,8 @@ def render_bottom_panel(df: pd.DataFrame) -> None:
             n_rows = len(df)
             duration = df["TIME"].max() if "TIME" in df.columns else 0
             fname = st.session_state.get("current_filename", "arquivo")
-            st.markdown(f"<p style='font-size: 0.7rem; margin-bottom: 0px; text-align: center;'>📄 {fname[:24]}</p>", unsafe_allow_html=True)
+            fname_safe = html.escape(fname[:24])  # SEC-01: sanitiza contra XSS
+            st.markdown(f"<p style='font-size: 0.7rem; margin-bottom: 0px; text-align: center;'>📄 {fname_safe}</p>", unsafe_allow_html=True)
             st.markdown(f"<p style='font-size: 0.7rem; text-align: center;'>🔢 {n_rows:,} registros | ⏱ {duration:.1f}s</p>", unsafe_allow_html=True)
 
         # ── Botão Nova Análise ──
@@ -153,8 +156,7 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     # Rastreio Geográfico
     st.markdown("#### 🗺️ Rastreio Geográfico")
     with st.container(border=True):
-        f_map = FlightMap()
-        f_map.render(df, snapshot)
+        _FLIGHT_MAP.render(df, snapshot)  # IMP-07: usa instância de módulo
 
     # Painel inferior (configurações + nova análise)
     render_bottom_panel(df)

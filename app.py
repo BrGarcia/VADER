@@ -44,8 +44,9 @@ def main() -> None:
     elif modo == "completa":
         render_completa()
         
-    elif df_cached is not None and modo != "completa":
+    elif df_cached is not None:  # BUG-03: removida condição redundante
         # ── Página de Análise VADR ──
+        st.session_state.modo_app = "vadr"  # BUG-08: define modo explicitamente
         render_main(df_cached)
         
     else:

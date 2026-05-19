@@ -14,8 +14,13 @@ import os
 import streamlit as st
 import pandas as pd
 
-from src.ui.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD, ENGINE_LIMITS, COLORS
+from src.utils.logger import get_logger
+from src.utils.helpers import safe_numeric
+from src.ui.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD, ENGINE_LIMITS, COLORS, get_engine_color
 from .fault_panel import FaultPanel
+
+_log = get_logger(__name__)
+
 
 # -----------------------------------------------------------------------
 # S-02: Cache de alertas.json — carregado UMA VEZ no nível de módulo
@@ -51,7 +56,7 @@ try:
             if _msg and _level:
                 MWC_TRANSLATION[int(_k)] = (_msg, _level.lower())
 except Exception as _e:
-    print(f"[VADER] Erro ao carregar mwc_data_catalogo.json: {_e}")
+    _log.warning("Erro ao carregar mwc_data_catalogo.json: %s", _e)
 
 # -----------------------------------------------------------------------
 # Descrições humanas das colunas de falha MW* (Fase 3)
@@ -171,32 +176,16 @@ class AttitudeBox:
     """Renderiza o Box Superior com o horizonte artificial e dados críticos."""
 
     def __init__(self) -> None:
+        # TODO(roadmap): Reativar AttitudeIndicator quando integrar horizonte artificial 3D
         self._attitude = AttitudeIndicator()
         self._fault_panel = FaultPanel()
 
     def render(self, snapshot: pd.Series, fault_columns: list[str] | None = None) -> None:
         """Renderiza painel de falhas (central) + box de motor (esquerda) + box de voo (direita)."""
 
+        # DUP-01: usa safe_numeric centralizado
         def _safe(key: str, fallback: float = 0.0) -> float:
-            val = snapshot.get(key, fallback)
-            try:
-                f = float(val)
-                return f if f == f else fallback  # NaN check
-            except Exception:
-                return fallback
-
-        # Helper para cores de alerta de motor
-        def _get_engine_color(val: float, var: str) -> str:
-            lims = ENGINE_LIMITS.get(var)
-            if not lims: return COLORS["normal"]
-            caution, warning = lims["caution"], lims["warning"]
-            if var == "OP": # Limite mínimo (Oil Press)
-                if val <= warning: return COLORS["warning"]
-                if val <= caution: return COLORS["caution"]
-            else:
-                if val >= warning: return COLORS["warning"]
-                if val >= caution: return COLORS["caution"]
-            return "#00FF88" # Verde normal se dentro dos limites
+            return safe_numeric(snapshot, key, fallback)
 
         # Dados de Voo
         pitch, roll, altitude, speed, nz, aoa = _safe("APA"), _safe("ARA"), _safe("BALT", _safe("PALT")), _safe("MACH", _safe("AS")), _safe("NZ"), _safe("AOA")
@@ -259,15 +248,15 @@ class AttitudeBox:
             html_engine = (
                 f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3; height: 320px; display: flex; flex-direction: column; justify-content: center;">'
                 f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">TORQUE (Q)</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(q, "Q")};">{q:.1f}%</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{get_engine_color(q, "Q")};">{q:.1f}%</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ITT</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(itt, "ITT")};">{itt:.0f}°C</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{get_engine_color(itt, "ITT")};">{itt:.0f}°C</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">NG / NP (%)</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ng, "NG")};">{ng:.1f}</span>/<span style="color:{_get_engine_color(np, "NP")};">{np:.1f}</span></div>'
+                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{get_engine_color(ng, "NG")};">{ng:.1f}</span>/<span style="color:{get_engine_color(np, "NP")};">{np:.1f}</span></div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">MANETE (PCL)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:{pcl_color};">{pcl:.1f}°</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">OIL T / P</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ot, "OT")};">{ot:.0f}°</span>/<span style="color:{_get_engine_color(op, "OP")};">{op:.0f}P</span></div>'
+                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{get_engine_color(ot, "OT")};">{ot:.0f}°</span>/<span style="color:{get_engine_color(op, "OP")};">{op:.0f}P</span></div>'
                 f'</div>'
             )
             st.markdown(html_engine, unsafe_allow_html=True)
@@ -409,24 +398,6 @@ class EICASPanel:
             return (f"MWC CODE {code}", "caution")
         return ("", "normal")
 
-    def _collect_active_faults(
-        self, snapshot: pd.Series, fault_columns: list[str]
-    ) -> list[tuple[str, str, str]]:
-        """Varre as colunas MW* e retorna lista de (coluna, descrição, severidade) ativas."""
-        active = []
-        for col in fault_columns:
-            val = snapshot.get(col, 0)
-            try:
-                if float(val) == 1.0:
-                    desc, sev = FAULT_DESCRIPTIONS.get(
-                        col,
-                        (col.split("_", 1)[-1].replace("_", " "), "caution"),
-                    )
-                    active.append((col, desc, sev))
-            except Exception:
-                pass
-        return active
-
 
 # -----------------------------------------------------------------------
 # Cards de Subsistemas — Fase 2
@@ -445,13 +416,9 @@ class SubsystemCards:
     def render_all(self, snapshot: pd.Series) -> None:
         """Renderiza os quatro cards de subsistemas lado a lado."""
 
+        # DUP-01: usa safe_numeric centralizado
         def _safe(key: str, fallback: float = 0.0) -> float:
-            val = snapshot.get(key, fallback)
-            try:
-                f = float(val)
-                return f if f == f else fallback
-            except Exception:
-                return fallback
+            return safe_numeric(snapshot, key, fallback)
 
         ldg = int(_safe("LDG"))
         wow = int(_safe("WOW"))
@@ -502,17 +469,10 @@ class SubsystemCards:
 
     def render_engine_summary_card(self, snapshot: pd.Series) -> None:
         """Exibe card resumido do motor: ITT, FF e status geral."""
-        def _safe(k: str) -> float:
-            v = snapshot.get(k, 0)
-            try:
-                f = float(v)
-                return f if f == f else 0.0
-            except Exception:
-                return 0.0
-
-        itt = _safe("ITT")
-        ff  = _safe("FF")
-        ng  = _safe("NG")
+        # DUP-01: usa safe_numeric centralizado
+        itt = safe_numeric(snapshot, "ITT")
+        ff  = safe_numeric(snapshot, "FF")
+        ng  = safe_numeric(snapshot, "NG")
 
         itt_color = "#FF4B4B" if itt > 1000 else "#FFC107" if itt > 850 else "#00FF88"
         ff_color  = "#FF4B4B" if ff  > 480  else "#FFC107" if ff  > 420 else "#00FF88"
