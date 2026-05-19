@@ -232,7 +232,18 @@ class DataLoader:
     def convert_to_parquet(self, df: pd.DataFrame, parquet_path: str) -> None:
         """Serializa o DataFrame para Parquet na pasta processed/."""
         os.makedirs(os.path.dirname(os.path.abspath(parquet_path)), exist_ok=True)
-        table = pa.Table.from_pandas(df, preserve_index=False)
+
+        # Garante que colunas object com tipos mistos (ex: CAS) são convertidas para float
+        # antes da serialização Arrow — evita ArrowTypeError em colunas ambíguas
+        protected = {"TIME_STR", "PHASE"}
+        df_clean = df.copy()
+        for col in df_clean.columns:
+            if col in protected:
+                continue
+            if df_clean[col].dtype == object:
+                df_clean[col] = pd.to_numeric(df_clean[col], errors="coerce")
+
+        table = pa.Table.from_pandas(df_clean, preserve_index=False)
         pq.write_table(table, parquet_path, compression="snappy")
 
     def load_parquet(self, parquet_path: str) -> pd.DataFrame:

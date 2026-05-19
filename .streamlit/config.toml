@@ -2,3 +2,10 @@
 port = 8505
 address = "localhost"
 headless = true
+
+[theme]
+base = "dark"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1A1C23"
+textColor = "#FAFAFA"
+primaryColor = "#FF9800"
