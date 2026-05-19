@@ -150,8 +150,8 @@ class TimelinePlotter:
 
         fig = go.Figure()
 
-        t_min = float(df[time_column].min())
-        t_max = float(df[time_column].max())
+        t_min = float(df[time_column].min()) / 60.0
+        t_max = float(df[time_column].max()) / 60.0
 
         n = len(y_columns)
 
@@ -191,7 +191,7 @@ class TimelinePlotter:
                 hover_suffix = " (constante)"
 
             fig.add_trace(go.Scatter(
-                x=plot_df[time_column],
+                x=plot_df[time_column] / 60.0,
                 y=normalized,
                 customdata=plot_series.to_numpy(),
                 mode="lines",
@@ -229,7 +229,7 @@ class TimelinePlotter:
                             normalized_highlight = highlight_series * 0.0 + 8.0
 
                         fig.add_trace(go.Scatter(
-                            x=plot_df[time_column],
+                            x=plot_df[time_column] / 60.0,
                             y=normalized_highlight,
                             customdata=highlight_series.to_numpy(),
                             mode="lines+markers",
@@ -249,11 +249,12 @@ class TimelinePlotter:
             font=dict(color="#FAFAFA", family="monospace", size=12),
             hovermode="x unified",
             xaxis=dict(
-                title="Tempo (s)",
+                title="Tempo (min)",
                 showgrid=True,
                 gridcolor=COLORS["grid"],
                 color="#FAFAFA",
                 zeroline=False,
+                ticksuffix=" min",
                 range=[t_min, t_max],
                 minallowed=t_min,
                 maxallowed=t_max,
@@ -327,7 +328,7 @@ class TimelinePlotter:
                 continue
 
             fault_rows = df.loc[fault_mask]
-            x_vals = fault_rows["TIME"]
+            x_vals = fault_rows["TIME"] / 60.0
 
             # A.5 — normaliza y dos marcadores para a mesma escala 5–95 das séries
             if ref_series is not None and y_ref in fault_rows.columns:
@@ -360,7 +361,7 @@ class TimelinePlotter:
                 ),
                 hovertemplate=(
                     f"<b>⚠ FALHA: {short_name}</b><br>"
-                    f"t=%{{x:.3f}} s<br>"
+                    f"t=%{{x:.2f}} min<br>"
                     f"{y_ref}=%{{customdata}}<extra></extra>"
                 ),
             ))
@@ -406,7 +407,7 @@ class TimelinePlotter:
             ),
         }
 
-        t_max = float(time_series.max())
+        t_max = float(time_series.max()) / 60.0
         run_id = phases.ne(phases.shift()).cumsum()
         first_annotated: set[str] = set()
 
@@ -416,11 +417,11 @@ class TimelinePlotter:
             phase = group_phases.iloc[0]
             t_start = float(group_times.iloc[0])
             next_pos = group_idx[-1] + 1
-            t_end = float(time_series.iloc[next_pos]) if next_pos < len(time_series) else t_max
+            t_end = float(time_series.iloc[next_pos]) / 60.0 if next_pos < len(time_series) else t_max
 
             style = _PHASE_STYLE.get(phase, _PHASE_STYLE["flight"])
             annotate = phase not in first_annotated
-            kwargs: dict = dict(x0=t_start, x1=t_end, fillcolor=style["fillcolor"], line_width=0)
+            kwargs: dict = dict(x0=t_start / 60.0, x1=t_end, fillcolor=style["fillcolor"], line_width=0)
             if annotate:
                 kwargs.update(
                     annotation_text=style["label"],
