@@ -13,7 +13,7 @@ def test_caution_itt():
 
 
 def test_warning_itt():
-    assert get_engine_color(920.0, "ITT") == COLORS["warning"]
+    assert get_engine_color(1020.0, "ITT") == COLORS["warning"]
 
 
 def test_oil_pressure_low_warning():
