@@ -197,11 +197,8 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     base_fig.update_layout(uirevision=filename)
 
     # ── Renderização Centralizada (Gráfico) ──
-    # Diminuímos a largura horizontal do gráfico para forçá-lo ao mesmo tamanho exato
-    _, col_centro, _ = st.columns([0.05, 0.9, 0.05])
-    
-    with col_centro:
-        st.plotly_chart(base_fig, width="stretch", config={"scrollZoom": True}, key=f"main_plot_{y_col}")
+    # Renderizamos em largura total correspondendo aos cards e ao restante da página
+    st.plotly_chart(base_fig, width="stretch", config={"scrollZoom": True}, key=f"main_plot_{y_col}")
 
     st.markdown("---")
 
