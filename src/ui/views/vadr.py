@@ -24,16 +24,22 @@ def build_base_figure(
     df: pd.DataFrame,
     y_cols: tuple[str, ...],
     fault_columns: tuple[str, ...],
+    exceedance_tuple: tuple[str, str, float] | None = None,
 ) -> object:
     """Constrói e retorna a figura Plotly base sem o cursor temporal.
 
     A.3 — Cacheada por (df, y_cols, fault_columns). Traces, faixas de fase e
     marcadores de falha não mudam enquanto o usuário move o slider — apenas
     o cursor muda. Separar aqui evita rebuild Python + serialização a cada tick.
-
-    O cursor é aplicado pelo chamador via copy.deepcopy + add_vline (A.4).
     """
-    fig = _PLOTTER.plot(df, list(y_cols))
+    exc_config = None
+    if exceedance_tuple:
+        exc_config = {
+            "var": exceedance_tuple[0],
+            "op": exceedance_tuple[1],
+            "val": exceedance_tuple[2]
+        }
+    fig = _PLOTTER.plot(df, list(y_cols), exceedance_config=exc_config)
     fig = _PLOTTER.add_phase_bands(fig, df)
     fig = _PLOTTER.add_fault_markers(fig, df, list(fault_columns), y_column=list(y_cols))
     return fig
@@ -146,11 +152,45 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
         y_col = y_cols[0] if y_cols else None
         st.session_state.last_y_col = y_col
 
+    # ── Configuração de Excedências (Highlight) ──
+    with st.expander("⚠️ Destacar Excedências (Exceedance Highlight)"):
+        col_exc1, col_exc2, col_exc3 = st.columns([2, 1, 1], gap="small")
+        with col_exc1:
+            exc_var = st.selectbox(
+                "Variável",
+                options=["Nenhuma"] + y_cols,
+                key="exc_var_select"
+            )
+        with col_exc2:
+            exc_op = st.selectbox(
+                "Operação",
+                options=[">", "<", ">=", "<=", "=="],
+                key="exc_op_select"
+            )
+        with col_exc3:
+            # Padrão inteligente: valor médio da variável se disponível
+            default_val = 0.0
+            if exc_var != "Nenhuma" and exc_var in df.columns:
+                try:
+                    default_val = float(df[exc_var].mean())
+                except Exception:
+                    pass
+            exc_val = st.number_input(
+                "Valor Limite",
+                value=default_val,
+                format="%.4f",
+                key="exc_val_input"
+            )
+
+    exceedance_tuple = None
+    if exc_var != "Nenhuma":
+        exceedance_tuple = (exc_var, exc_op, float(exc_val))
+
     label_vars = " · ".join(f"`{c}`" for c in y_cols)
     titulo_placeholder.markdown(f"#### 📈 Análise Temporal — {label_vars}")
 
     # A.3 — obtém a figura base cacheada (sem cursor)
-    base_fig = build_base_figure(df, tuple(y_cols), tuple(fault_columns))
+    base_fig = build_base_figure(df, tuple(y_cols), tuple(fault_columns), exceedance_tuple)
 
     # B.3 — Mantém o estado de zoom (X-axis range) entre reruns usando uirevision baseada no arquivo
     filename = st.session_state.get("current_filename", "vader_file")
