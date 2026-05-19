@@ -341,34 +341,30 @@ class DataLoader:
     # ------------------------------------------------------------------
 
     def get_numeric_columns(self, df: pd.DataFrame) -> list[str]:
-        """Retorna colunas numéricas de dados, excluindo flags de validade e TIME.
+        """Retorna colunas numéricas disponíveis para plotagem.
 
-        Comportamento por modo de análise (lido de ``df.attrs["analysis_mode"]``):
+        Comportamento estrito por modo (lido de ``df.attrs["analysis_mode"]``):
 
-        - ``"basic"``    — exclui colunas de validade (padrão XYZV) para manter o
-          seletor enxuto. Apenas os parâmetros essenciais ficam disponíveis.
-        - ``"complete"`` — retorna **todas** as colunas numéricas sem filtragem
-          adicional (exceto TIME, ``Rec #`` e ``Rec`` que são eixo/índice).
-          Qualquer parâmetro, mesmo com variação pequena, pode ser relevante
-          para uma análise detalhada.
+        - ``"basic"``    — retorna **exatamente** as variáveis de
+          ``BASIC_ANALYSIS_COLUMNS`` que estejam presentes no DataFrame e
+          sejam numéricas. Nenhuma coluna derivada ou extra é exposta.
+        - ``"complete"`` — retorna **todas** as colunas numéricas do DataFrame
+          sem qualquer filtragem adicional (apenas ``TIME``, ``Rec #`` e
+          ``Rec`` são excluídos pois são eixo/índice, não parâmetros).
         """
-        numeric = df.select_dtypes(include="number").columns.tolist()
+        numeric_set = set(df.select_dtypes(include="number").columns)
         # Colunas de navegação/índice — nunca são parâmetros de análise
         excluded = {"TIME", "Rec #", "Rec"}
 
         analysis_mode = df.attrs.get("analysis_mode", "basic")
 
         if analysis_mode == "complete":
-            # Modo completo: sem filtros adicionais — expõe tudo
-            result = [c for c in numeric if c not in excluded]
+            # Modo completo: tudo sem omissões
+            result = [c for c in numeric_set if c not in excluded]
         else:
-            # Modo básico: oculta flags de validade (padrão XYZV)
-            col_set = set(df.columns)
-            validity_cols = {
-                c for c in numeric
-                if c.endswith("V") and len(c) > 1 and c[:-1] in col_set
-            }
-            result = [c for c in numeric if c not in excluded and c not in validity_cols]
+            # Modo básico: apenas as variáveis essenciais definidas em BASIC_ANALYSIS_COLUMNS
+            essential = set(self.BASIC_ANALYSIS_COLUMNS) - excluded
+            result = [c for c in essential if c in numeric_set]
 
         return sorted(result)
 
