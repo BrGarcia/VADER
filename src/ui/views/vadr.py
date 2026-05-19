@@ -92,6 +92,7 @@ def render_bottom_panel(df: pd.DataFrame) -> None:
                     st.session_state.pop(key, None)
                 st.rerun()
 
+@st.fragment
 def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     """Monta o layout sincronizado de análise. Retorna y_col selecionado."""
 
@@ -151,25 +152,16 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     # A.3 — obtém a figura base cacheada (sem cursor)
     base_fig = build_base_figure(df, tuple(y_cols), tuple(fault_columns))
 
-    # A.4 — deepcopy isola o cursor do cache: o cursor muda a cada tick do slider
-    fig = copy.deepcopy(base_fig)
+    # B.3 — Mantém o estado de zoom (X-axis range) entre reruns usando uirevision baseada no arquivo
+    filename = st.session_state.get("current_filename", "vader_file")
+    base_fig.update_layout(uirevision=filename)
 
-    t_cursor = float(snapshot["TIME"]) if "TIME" in snapshot else 0
-    fig.add_vline(
-        x=t_cursor,
-        line=dict(color="#FF4B4B", width=2, dash="dash"),
-        annotation_text=f"  t={t_cursor:.2f}s",
-        annotation_font=dict(color="#FF4B4B", size=11),
-    )
-
-    # ── Renderização Centralizada (Gráfico e Controle) ──
-    # Diminuímos a largura horizontal do gráfico e da barra para forçá-los ao mesmo tamanho exato
+    # ── Renderização Centralizada (Gráfico) ──
+    # Diminuímos a largura horizontal do gráfico para forçá-lo ao mesmo tamanho exato
     _, col_centro, _ = st.columns([0.05, 0.9, 0.05])
     
     with col_centro:
-        st.plotly_chart(fig, width="stretch", config={"scrollZoom": True}, key=f"main_plot_{y_col}")
-        # Slider de Tempo logo abaixo do gráfico
-        controller.render_slider()
+        st.plotly_chart(base_fig, width="stretch", config={"scrollZoom": True}, key=f"main_plot_{y_col}")
 
     st.markdown("---")
 
