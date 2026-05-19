@@ -37,7 +37,7 @@ def render_landing() -> None:
     # ── Cabeçalho centralizado ──
     _, col_mid, _ = st.columns([2, 1, 2])
     with col_mid:
-        st.image("assets/a29_sideview.png", use_container_width=True)
+        st.image("assets/a29_sideview.png", width="stretch")
         st.markdown("<h1 style='text-align: center; margin-top: -20px;'>V.A.D.E.R.</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; font-style: italic; color: #888; font-size: 0.9em;'>Visualizador Analítico de Dados de Engenharia e Rastreio — A-29</p>", unsafe_allow_html=True)
 

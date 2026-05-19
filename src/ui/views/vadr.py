@@ -167,7 +167,7 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     _, col_centro, _ = st.columns([0.05, 0.9, 0.05])
     
     with col_centro:
-        st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True}, key=f"main_plot_{y_col}")
+        st.plotly_chart(fig, width="stretch", config={"scrollZoom": True}, key=f"main_plot_{y_col}")
         # Slider de Tempo logo abaixo do gráfico
         controller.render_slider()
 

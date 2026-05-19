@@ -204,13 +204,22 @@ class DataLoader:
         S-05: a coluna 'PHASE' («ground» / «flight») é derivada do sensor WOW
         e gravada no Parquet para que TimelinePlotter.add_phase_bands() a leia
         diretamente, sem recalcular a cada rerun do Streamlit.
+
+        Usa pd.concat para converter todas as colunas numéricas de uma única vez,
+        evitando o PerformanceWarning de DataFrame fragmentado que ocorria com o
+        loop de atribuições individuais (frame[col] = ...).
         """
         protected = {"TIME", "STIME", "TIME_STR"}
+        numeric_cols = [c for c in df.columns if c not in protected]
+        protected_cols = [c for c in df.columns if c in protected]
 
-        for col in df.columns:
-            if col in protected:
-                continue
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+        # Converte todas as colunas não protegidas de uma só vez (evita fragmentação)
+        numeric_converted = df[numeric_cols].apply(
+            lambda s: pd.to_numeric(s, errors="coerce")
+        )
+
+        # Reconstrói o DataFrame de forma coesa (sem fragmentação interna)
+        df = pd.concat([df[protected_cols], numeric_converted], axis=1)[df.columns]
 
         # Forward-fill colunas críticas
         cols_to_fill = [c for c in self.CORE_COLUMNS if c in df.columns]
@@ -219,11 +228,12 @@ class DataLoader:
 
         # S-05: pré-computa a coluna PHASE no momento da ingestão
         if "WOW" in df.columns:
-            df["PHASE"] = (
+            phase = (
                 df["WOW"].astype(float).fillna(0).astype(int)
                 .map({1: "ground", 0: "flight"})
                 .fillna("flight")
             )
+            df = pd.concat([df, phase.rename("PHASE")], axis=1)
 
         return df
 
