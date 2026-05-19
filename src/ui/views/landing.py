@@ -17,7 +17,7 @@ def _get_recent_files() -> list[str]:
     return files
 
 @st.cache_data(show_spinner="Processando telemetria...")
-def _ingest(file_bytes: bytes, filename: str) -> pd.DataFrame:
+def _ingest(file_bytes: bytes, filename: str, analysis_mode: str = "complete") -> pd.DataFrame:
     # SEC-02: sanitiza filename para evitar path traversal
     safe_name = PurePosixPath(filename).name
     raw_path = os.path.join(DataLoader.RAW_DIR, safe_name)
@@ -27,7 +27,7 @@ def _ingest(file_bytes: bytes, filename: str) -> pd.DataFrame:
     with open(raw_path, "wb") as fh:
         fh.write(file_bytes)
 
-    return _LOADER.ingest(raw_path)
+    return _LOADER.ingest(raw_path, analysis_mode=analysis_mode)
 
 def render_landing() -> None:
     """Landing page: cabeçalho + box de upload + botão ENVIAR."""
@@ -75,6 +75,20 @@ def render_landing() -> None:
                 key="landing_csv_uploader"
             )
 
+            # A.6 — Seletor de modo de análise
+            st.markdown("<p style='font-size: 0.72rem; font-weight: bold; margin-bottom: 0px; text-align: center; margin-top: 10px;'>🔍 MODO DE ANÁLISE</p>", unsafe_allow_html=True)
+            analysis_mode = st.radio(
+                "Tipo de análise",
+                options=["basic", "complete"],
+                format_func=lambda v: "⚡ Análise Básica (28 variáveis)" if v == "basic" else "📈 Análise Completa (todas as variáveis)",
+                index=0,
+                horizontal=False,
+                label_visibility="collapsed",
+                key="landing_analysis_mode",
+                help="Básica: carregamento rápido, slider fluido. Completa: todas as 258+ variáveis, incluindo flags MW*.",
+            )
+            st.session_state.analysis_mode = analysis_mode
+
             # Feedback de seleção
             st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
             uploaded = st.session_state.get("landing_csv_uploader")
@@ -101,7 +115,7 @@ def render_landing() -> None:
 
             if enviar:
                 if uploaded is not None:
-                    new_df = _ingest(uploaded.getvalue(), uploaded.name)
+                    new_df = _ingest(uploaded.getvalue(), uploaded.name, analysis_mode)
                     if new_df is not None:
                         st.session_state.current_df = new_df
                         st.session_state.current_filename = uploaded.name
@@ -110,7 +124,7 @@ def render_landing() -> None:
                         st.error("❌ Falha ao processar o arquivo CSV.")
                 elif selected_recent and selected_recent != "-- Selecione um voo recente --":
                     raw_path = os.path.join(DataLoader.RAW_DIR, selected_recent)
-                    new_df = _LOADER.ingest(raw_path)
+                    new_df = _LOADER.ingest(raw_path, analysis_mode=analysis_mode)
                     if new_df is not None:
                         st.session_state.current_df = new_df
                         st.session_state.current_filename = selected_recent

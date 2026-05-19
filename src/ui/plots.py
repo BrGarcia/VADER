@@ -104,6 +104,25 @@ _TRACE_PALETTE: list[str] = [
 ]
 
 
+# -----------------------------------------------------------------------
+# A.2 — Decimação de séries temporais
+# -----------------------------------------------------------------------
+
+_MAX_TIMELINE_POINTS: int = 6_000
+
+
+def _downsample_frame(df: pd.DataFrame, max_points: int = _MAX_TIMELINE_POINTS) -> pd.DataFrame:
+    """Retorna o DataFrame com no máximo *max_points* linhas via stride uniforme.
+
+    Stride simples é suficiente para preservar a leitura visual em janelas de
+    900–1400 px. LTTB pode ser avaliado depois se picos estreitos forem perdidos.
+    """
+    if len(df) <= max_points:
+        return df
+    stride = max(1, math.ceil(len(df) / max_points))
+    return df.iloc[::stride]
+
+
 class TimelinePlotter:
     """Gera o gráfico 2D principal (Eixo X = TIME, Eixo Y = variável selecionada)."""
 
@@ -134,13 +153,15 @@ class TimelinePlotter:
 
         n = len(y_columns)
 
+        # A.2 — decima o DataFrame uma única vez para todos os traces
+        plot_df = _downsample_frame(df)
+
         for i, col in enumerate(y_columns):
             if col not in df.columns:
                 continue
 
             color = _TRACE_PALETTE[i % len(_TRACE_PALETTE)]
             series = df[col]
-            real_vals = series.values
 
             # Normaliza para 5–95 para renderização — mantém valores reais no customdata
             s_clean = series.dropna()
@@ -150,21 +171,23 @@ class TimelinePlotter:
 
             is_constant = (v_max - v_min) < 1e-6
 
+            plot_series = plot_df[col] if col in plot_df.columns else series
+
             if not is_constant:
                 # Normaliza para ocupar 5–95% da altura
-                normalized = 5.0 + (series - v_min) / (v_max - v_min) * 90.0
+                normalized = 5.0 + (plot_series - v_min) / (v_max - v_min) * 90.0
                 line_style = dict(color=color, width=1.5)
                 hover_suffix = ""
             else:
                 # Série constante: reta visível na baseline (y=8) com estilo diferenciado
-                normalized = series * 0.0 + 8.0
+                normalized = plot_series * 0.0 + 8.0
                 line_style = dict(color=color, width=2.5, dash="dot")
                 hover_suffix = " (constante)"
 
             fig.add_trace(go.Scatter(
-                x=df[time_column],
+                x=plot_df[time_column],
                 y=normalized,
-                customdata=real_vals,
+                customdata=plot_series.to_numpy(),
                 mode="lines",
                 name=f"{col}{hover_suffix}" if is_constant else col,
                 line=line_style,
@@ -224,15 +247,29 @@ class TimelinePlotter:
     ) -> go.Figure:
         """Sobrepõe marcadores no gráfico nos instantes em que uma falha MW* == 1.
 
-        Os marcadores são plotados no valor real da primeira série temporal
-        selecionada (y_column) para que fiquem visíveis sobre a curva.
+        A.5 — Os marcadores usam a mesma normalização 5–95 das séries principais,
+        garantindo alinhamento visual. O valor real é preservado no customdata
+        para exibição correta no hover.
         """
         # Aceita str ou lista — usa sempre a primeira coluna como referência Y
         y_ref = y_column[0] if isinstance(y_column, list) else y_column
         if "TIME" not in df.columns or not fault_columns:
             return fig
 
-        y_col = y_ref if y_ref in df.columns else None
+        # A.5 — calcula normalização da série de referência (mesma lógica de plot())
+        if y_ref in df.columns:
+            ref_series = df[y_ref]
+            ref_clean = ref_series.dropna()
+            if not ref_clean.empty:
+                v_min = float(ref_clean.min())
+                v_max = float(ref_clean.max())
+            else:
+                v_min, v_max = 0.0, 1.0
+            ref_is_constant = (v_max - v_min) < 1e-6
+        else:
+            ref_series = None
+            v_min, v_max = 0.0, 1.0
+            ref_is_constant = True
 
         for col in fault_columns:
             if col not in df.columns:
@@ -244,16 +281,26 @@ class TimelinePlotter:
 
             fault_rows = df.loc[fault_mask]
             x_vals = fault_rows["TIME"]
-            y_vals = fault_rows[y_col] if y_col else pd.Series(
-                [0.0] * len(fault_rows), index=fault_rows.index
-            )
+
+            # A.5 — normaliza y dos marcadores para a mesma escala 5–95 das séries
+            if ref_series is not None and y_ref in fault_rows.columns:
+                raw_y = fault_rows[y_ref]
+                if ref_is_constant:
+                    y_normalized = raw_y * 0.0 + 8.0
+                else:
+                    y_normalized = 5.0 + (raw_y - v_min) / (v_max - v_min) * 90.0
+                customdata = raw_y.to_numpy()   # valor real para hover
+            else:
+                y_normalized = pd.Series([50.0] * len(fault_rows), index=fault_rows.index)
+                customdata = y_normalized.to_numpy()
 
             # Rótulo limpo: remove prefixo MW*_
             short_name = col.split("_", 1)[-1] if "_" in col else col
 
             fig.add_trace(go.Scatter(
                 x=x_vals,
-                y=y_vals,
+                y=y_normalized,
+                customdata=customdata,
                 mode="markers",
                 name=col,
                 legendgroup="faults",
@@ -267,7 +314,7 @@ class TimelinePlotter:
                 hovertemplate=(
                     f"<b>⚠ FALHA: {short_name}</b><br>"
                     f"t=%{{x:.3f}} s<br>"
-                    f"{y_ref}=%{{y}}<extra></extra>"  # BUG-04: usa y_ref (str) em vez de y_column (pode ser list)
+                    f"{y_ref}=%{{customdata}}<extra></extra>"
                 ),
             ))
 

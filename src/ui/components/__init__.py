@@ -137,8 +137,22 @@ class TimeController:
         if "is_playing" not in st.session_state:
             st.session_state.is_playing = False
 
+    def _sync_slider_state(self) -> None:
+        """Callback on_change: sincroniza o widget do slider com SESSION_KEY.
+
+        Chamado pelo Streamlit antes do próximo rerun — não dispara rerun extra.
+        """
+        st.session_state[self.SESSION_KEY] = int(
+            st.session_state.get(f"{self.SESSION_KEY}_widget", 0)
+        )
+
     def render_slider(self, time_column: str = "TIME") -> int:
-        """Renderiza o slider de tempo com botão Play/Pause e retorna o índice selecionado."""
+        """Renderiza o slider de tempo e retorna o índice selecionado.
+
+        A.1 — Remove st.rerun() manual: o slider já dispara rerun quando seu
+        valor muda; o callback on_change apenas sincroniza st.session_state
+        antes do próximo ciclo, sem adicionar um rerun extra.
+        """
         n = len(self.df)
         if n == 0:
             return 0
@@ -146,18 +160,16 @@ class TimeController:
         current_idx: int = st.session_state.get(self.SESSION_KEY, 0)
         current_idx = max(0, min(current_idx, n - 1))
 
-        # ── Linha 1: Slider (Barra de Tempo) ──
-        idx: int = st.slider(
+        # ── Slider (Barra de Tempo) ──
+        st.slider(
             "Linha do Tempo",
             min_value=0,
             max_value=n - 1,
             value=current_idx,
             key=f"{self.SESSION_KEY}_widget",
             label_visibility="collapsed",
+            on_change=self._sync_slider_state,
         )
-        if idx != current_idx:
-            st.session_state[self.SESSION_KEY] = idx
-            st.rerun()
 
         # ── Lógica de Reprodução Automática (Removida a pedido) ──
         return int(st.session_state[self.SESSION_KEY])

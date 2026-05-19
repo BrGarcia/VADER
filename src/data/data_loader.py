@@ -19,6 +19,18 @@ class DataLoader:
     RAW_DIR: str = "data/raw"
     PROCESSED_DIR: str = "data/processed"
 
+    # A.6 — Variáveis carregadas no modo "basic" (28 colunas originais do CSV).
+    # Colunas derivadas internas (TIME_STR, PHASE) são criadas no pipeline
+    # e não precisam estar no CSV bruto.
+    BASIC_ANALYSIS_COLUMNS: list[str] = [
+        "TIME", "STIME",
+        "GPSLAT", "GPSLONG",
+        "BALT", "PALT", "RAD_ALT", "MACH", "AOA", "APA", "ARA", "NZ", "MAG_HDG",
+        "WOW", "LDG", "FLAP", "AIRBRK",
+        "PCL", "Q", "ITT", "NG", "NP", "FF", "OT", "OP",
+        "ENGFIRE", "MWC_DATA", "VALIDARINC",
+    ]
+
     # Colunas críticas: sensores atualizam em sub-taxas, gerando células vazias.
     # Aplicamos forward-fill para manter o último valor conhecido até a próxima atualização.
     CORE_COLUMNS: list[str] = [
@@ -36,26 +48,33 @@ class DataLoader:
     # Ingestão — pipeline principal
     # ------------------------------------------------------------------
 
-    def ingest(self, filepath: str) -> pd.DataFrame:
+    def ingest(self, filepath: str, analysis_mode: str = "complete") -> pd.DataFrame:
         """Pipeline principal: lê CSV, extrai metadados, limpa e converte para Parquet se necessário.
+
+        Args:
+            filepath: Caminho para o arquivo CSV bruto.
+            analysis_mode: ``"basic"`` carrega apenas as 28 variáveis essenciais;
+                ``"complete"`` carrega todas as colunas do CSV (padrão anterior).
 
         Retorna o DataFrame processado pronto para uso na UI.
         """
-        parquet_path = self._get_parquet_path(filepath)
+        parquet_path = self._get_parquet_path(filepath, analysis_mode)
         meta_path = self._get_meta_path(parquet_path)
 
         if self._parquet_is_fresh(filepath, parquet_path):
             df = self.load_parquet(parquet_path)
             # BUG-05: carrega metadata do JSON sidecar (persiste sem CSV)
             df.attrs["metadata"] = self._load_metadata_json(meta_path, filepath)
+            df.attrs["analysis_mode"] = analysis_mode
             return df
 
         metadata = self._extract_metadata(filepath)
-        df = self._read_raw_csv(filepath)
+        df = self._read_raw_csv(filepath, analysis_mode)
         df = self._resolve_time_column(df)
         df = self._coerce_types(df)
         df = df.reset_index(drop=True)
         df.attrs["metadata"] = metadata
+        df.attrs["analysis_mode"] = analysis_mode
 
         self.convert_to_parquet(df, parquet_path)
         # BUG-05: salva metadata como JSON sidecar
@@ -139,17 +158,30 @@ class DataLoader:
                     return i
         return 8  # fallback seguro para o formato VADR padrão
 
-    def _read_raw_csv(self, filepath: str) -> pd.DataFrame:
-        """Lê o arquivo CSV pulando metadados e a linha de unidades."""
+    def _read_raw_csv(self, filepath: str, analysis_mode: str = "complete") -> pd.DataFrame:
+        """Lê o arquivo CSV pulando metadados e a linha de unidades.
+
+        A.6 — No modo ``"basic"``, passa ``usecols`` ao ``read_csv`` para carregar
+        apenas as 28 variáveis essenciais, reduzindo parsing, memória e tempo de
+        ingestão sem precisar filtrar depois.
+        """
         header_row = self._strip_metadata_headers(filepath)
         # A linha logo após o cabeçalho contém as unidades (ex: "HH:MM:SS.FFF, degrees...")
         # e não deve ser interpretada como dado.
         skip_rows = list(range(header_row)) + [header_row + 1]
 
+        # A.6 — filtra colunas já no read_csv para o modo básico
+        if analysis_mode == "basic":
+            basic_set = set(self.BASIC_ANALYSIS_COLUMNS)
+            usecols_fn = lambda c: c.strip() in basic_set  # noqa: E731
+        else:
+            usecols_fn = None
+
         df = pd.read_csv(
             filepath,
             skiprows=skip_rows,
             header=0,
+            usecols=usecols_fn,
             low_memory=False,
             na_values=["", " "],
             keep_default_na=True,
@@ -252,10 +284,14 @@ class DataLoader:
         df.columns = [c.strip() for c in df.columns]
         return df
 
-    def _get_parquet_path(self, csv_filepath: str) -> str:
-        """Calcula o caminho .parquet correspondente ao csv fornecido."""
+    def _get_parquet_path(self, csv_filepath: str, analysis_mode: str = "complete") -> str:
+        """Calcula o caminho .parquet correspondente ao csv e ao modo de análise.
+
+        A.6 — O sufixo ``__basic`` / ``__complete`` evita conflito entre os
+        dois Parquets gerados para o mesmo CSV.
+        """
         basename = os.path.splitext(os.path.basename(csv_filepath))[0]
-        return os.path.join(self.processed_dir, f"{basename}.parquet")
+        return os.path.join(self.processed_dir, f"{basename}__{analysis_mode}.parquet")
 
     def _parquet_is_fresh(self, csv_filepath: str, parquet_path: str) -> bool:
         """Retorna True se o Parquet existe e é mais recente que o CSV de origem."""

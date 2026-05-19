@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import html
 import os
 import streamlit as st
@@ -12,6 +13,30 @@ from src.ui.views.landing import _get_recent_files, _LOADER
 
 _PLOTTER = TimelinePlotter()
 _FLIGHT_MAP = FlightMap()  # IMP-07: instanciado uma vez no nível de módulo
+
+
+# -----------------------------------------------------------------------
+# A.3 — Figura base cacheada (sem cursor)
+# -----------------------------------------------------------------------
+
+@st.cache_data(show_spinner=False)
+def build_base_figure(
+    df: pd.DataFrame,
+    y_cols: tuple[str, ...],
+    fault_columns: tuple[str, ...],
+) -> object:
+    """Constrói e retorna a figura Plotly base sem o cursor temporal.
+
+    A.3 — Cacheada por (df, y_cols, fault_columns). Traces, faixas de fase e
+    marcadores de falha não mudam enquanto o usuário move o slider — apenas
+    o cursor muda. Separar aqui evita rebuild Python + serialização a cada tick.
+
+    O cursor é aplicado pelo chamador via copy.deepcopy + add_vline (A.4).
+    """
+    fig = _PLOTTER.plot(df, list(y_cols))
+    fig = _PLOTTER.add_phase_bands(fig, df)
+    fig = _PLOTTER.add_fault_markers(fig, df, list(fault_columns), y_column=list(y_cols))
+    return fig
 
 def render_bottom_panel(df: pd.DataFrame) -> None:
     """Painel inferior: troca de arquivo, info e botão Nova Análise."""
@@ -39,7 +64,9 @@ def render_bottom_panel(df: pd.DataFrame) -> None:
                 if sel and sel != "── Arquivo atual ──":
                     if st.button("▶  Carregar", key="analysis_load_btn", use_container_width=True):
                         raw_path = os.path.join(DataLoader.RAW_DIR, sel)
-                        new_df = _LOADER.ingest(raw_path)
+                        # A.6 — respeita o modo escolhido na landing page
+                        mode = st.session_state.get("analysis_mode", "complete")
+                        new_df = _LOADER.ingest(raw_path, analysis_mode=mode)
                         if new_df is not None:
                             st.session_state.current_df = new_df
                             st.session_state.current_filename = sel
@@ -121,10 +148,11 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     label_vars = " · ".join(f"`{c}`" for c in y_cols)
     titulo_placeholder.markdown(f"#### 📈 Análise Temporal — {label_vars}")
 
-    fig = _PLOTTER.plot(df, y_cols)
-    fig = _PLOTTER.add_phase_bands(fig, df)
-    fig = _PLOTTER.add_fault_markers(fig, df, fault_columns, y_column=y_cols)
+    # A.3 — obtém a figura base cacheada (sem cursor)
+    base_fig = build_base_figure(df, tuple(y_cols), tuple(fault_columns))
 
+    # A.4 — deepcopy isola o cursor do cache: o cursor muda a cada tick do slider
+    fig = copy.deepcopy(base_fig)
 
     t_cursor = float(snapshot["TIME"]) if "TIME" in snapshot else 0
     fig.add_vline(
