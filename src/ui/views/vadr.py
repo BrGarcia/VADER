@@ -205,16 +205,17 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
                 key="exc_op_select"
             )
         with col_exc3:
-            # Padrão inteligente: valor médio da variável se disponível
-            default_val = 0.0
-            if exc_var != "Nenhuma" and exc_var in df.columns:
-                try:
-                    default_val = float(df[exc_var].mean())
-                except Exception:
-                    pass
+            # Semente o valor padrão apenas se ainda não estiver no session_state
+            if "exc_val_input" not in st.session_state:
+                default_val = 0.0
+                if exc_var != "Nenhuma" and exc_var in df.columns:
+                    try:
+                        default_val = float(df[exc_var].mean())
+                    except Exception:
+                        pass
+                st.session_state["exc_val_input"] = default_val
             st.number_input(
                 "Valor Limite",
-                value=st.session_state.get("exc_val_input", default_val),
                 format="%.4f",
                 key="exc_val_input"
             )
