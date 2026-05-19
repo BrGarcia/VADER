@@ -28,7 +28,7 @@ class DataLoader:
         "BALT", "PALT", "RAD_ALT", "MACH", "AOA", "APA", "ARA", "NZ", "MAG_HDG",
         "WOW", "LDG", "FLAP", "AIRBRK",
         "PCL", "Q", "ITT", "NG", "NP", "FF", "OT", "OP",
-        "ENGFIRE", "MWC_DATA", "VALIDARINC",
+        "ENGFIRE", "MWC_DATA", "VALIDARINC", "FR",
     ]
 
     # Colunas críticas: sensores atualizam em sub-taxas, gerando células vazias.
