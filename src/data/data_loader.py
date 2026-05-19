@@ -341,18 +341,35 @@ class DataLoader:
     # ------------------------------------------------------------------
 
     def get_numeric_columns(self, df: pd.DataFrame) -> list[str]:
-        """Retorna colunas numéricas de dados, excluindo flags de validade e TIME."""
+        """Retorna colunas numéricas de dados, excluindo flags de validade e TIME.
+
+        Comportamento por modo de análise (lido de ``df.attrs["analysis_mode"]``):
+
+        - ``"basic"``    — exclui colunas de validade (padrão XYZV) para manter o
+          seletor enxuto. Apenas os parâmetros essenciais ficam disponíveis.
+        - ``"complete"`` — retorna **todas** as colunas numéricas sem filtragem
+          adicional (exceto TIME, ``Rec #`` e ``Rec`` que são eixo/índice).
+          Qualquer parâmetro, mesmo com variação pequena, pode ser relevante
+          para uma análise detalhada.
+        """
         numeric = df.select_dtypes(include="number").columns.tolist()
-        col_set = set(df.columns)
+        # Colunas de navegação/índice — nunca são parâmetros de análise
         excluded = {"TIME", "Rec #", "Rec"}
 
-        # Colunas de validade seguem o padrão XYZV onde XYZ é o nome do dado.
-        validity_cols = {
-            c for c in numeric
-            if c.endswith("V") and len(c) > 1 and c[:-1] in col_set
-        }
+        analysis_mode = df.attrs.get("analysis_mode", "basic")
 
-        result = [c for c in numeric if c not in excluded and c not in validity_cols]
+        if analysis_mode == "complete":
+            # Modo completo: sem filtros adicionais — expõe tudo
+            result = [c for c in numeric if c not in excluded]
+        else:
+            # Modo básico: oculta flags de validade (padrão XYZV)
+            col_set = set(df.columns)
+            validity_cols = {
+                c for c in numeric
+                if c.endswith("V") and len(c) > 1 and c[:-1] in col_set
+            }
+            result = [c for c in numeric if c not in excluded and c not in validity_cols]
+
         return sorted(result)
 
     def get_row_at_time(self, df: pd.DataFrame, time_index: int) -> pd.Series:
