@@ -36,7 +36,7 @@ class DataLoader:
     CORE_COLUMNS: list[str] = [
         "BALT", "PALT", "MACH", "AS",
         "AOA", "APA", "ARA", "NZ", "WOW", "LDG",
-        "Q", "ITT", "NG", "NP", "FF", "OT", "OP",
+        "Q", "ITT", "NG", "NP", "FF", "FR", "OT", "OP",
         "PCL", "MWC_DATA",
     ]
 
