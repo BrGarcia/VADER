@@ -323,7 +323,7 @@ class EICASPanel:
             with col:
                 st.plotly_chart(
                     fig,
-                    width="stretch",
+                    use_container_width=True,
                     config={"displayModeBar": False, "staticPlot": True},
                     key=f"gauge_{i}_{snapshot.name}" # snapshot.name é o índice da linha (tempo)
                 )

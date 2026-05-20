@@ -8,11 +8,9 @@ import pandas as pd
 from src.data.data_loader import DataLoader
 from src.ui.plots import TimelinePlotter
 from src.ui.components import AttitudeBox, TimeController, SubsystemCards
-from src.ui.components.flight_map import FlightMap
 from src.ui.views.landing import _get_recent_files, _LOADER
 
 _PLOTTER = TimelinePlotter()
-_FLIGHT_MAP = FlightMap()  # IMP-07: instanciado uma vez no nível de módulo
 
 
 # -----------------------------------------------------------------------
@@ -185,9 +183,24 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     filename = st.session_state.get("current_filename", "vader_file")
     base_fig.update_layout(uirevision=filename)
 
-    # ── Renderização Centralizada (Gráfico) ──
+    # A.4 — deepcopy isola o cursor do cache: o cursor muda a cada tick do slider
+    fig = copy.deepcopy(base_fig)
+
+    t_cursor = float(snapshot["TIME"]) if "TIME" in snapshot else 0.0
+    t_cursor_min = t_cursor / 60.0
+    fig.add_vline(
+        x=t_cursor_min,
+        line=dict(color="#FF4B4B", width=2, dash="dash"),
+        annotation_text=f"  t={t_cursor_min:.2f} min",
+        annotation_font=dict(color="#FF4B4B", size=11),
+    )
+
+    # ── Renderização Centralizada (Gráfico e Controle) ──
     # Renderizamos em largura total correspondendo aos cards e ao restante da página
-    st.plotly_chart(base_fig, width="stretch", config={"scrollZoom": True}, key=f"main_plot_{y_col}")
+    st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True}, key=f"main_plot_{y_col}")
+
+    # Slider de Tempo logo abaixo do gráfico
+    controller.render_slider()
 
     # ── Configuração de Excedências (Highlight) ──
     with st.expander("⚠️ Destacar Excedências (Exceedance Highlight)"):
@@ -230,10 +243,6 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     st.markdown("#### 🔧 Subsistemas")
     subsys_cards.render_all(snapshot)
 
-    # Rastreio Geográfico
-    st.markdown("#### 🗺️ Rastreio Geográfico")
-    with st.container(border=True):
-        _FLIGHT_MAP.render(df, snapshot)  # IMP-07: usa instância de módulo
 
     # Painel inferior (configurações + nova análise)
     render_bottom_panel(df)
