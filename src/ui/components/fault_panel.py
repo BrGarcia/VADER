@@ -19,7 +19,7 @@ class FaultPanel:
         """Renderiza um grid denso de alertas (até 60) como um único bloco HTML."""
 
         html_grid = (
-            '<div style="height: 320px; border: 1px solid #2D2D2D; border-radius: 8px; '
+            '<div style="height: 380px; border: 1px solid #2D2D2D; border-radius: 8px; '
             'padding: 6px; background: #0E1117; display: flex; flex-wrap: wrap; '
             'align-content: flex-start; gap: 4px; overflow: hidden;">'
         )

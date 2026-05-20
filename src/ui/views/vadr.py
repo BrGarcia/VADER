@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import os
 import streamlit as st
 import pandas as pd
 from src.data.data_loader import DataLoader
 from src.ui.plots import TimelinePlotter
-from src.ui.components import AttitudeBox, TimeController, SubsystemCards
+from src.ui.components import AttitudeBox, TimeController
 from src.ui.components.flight_map import FlightMap
 from src.ui.views.landing import _get_recent_files, _LOADER
 
@@ -65,7 +67,6 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
 
     controller    = TimeController(df)
     attitude_box  = AttitudeBox()
-    subsys_cards  = SubsystemCards()
     fault_columns = _LOADER.get_fault_columns(df)
 
     # Cabeçalho de Dados da Aeronave
@@ -140,9 +141,6 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     st.markdown("#### ✈️ Atitude e Dados Críticos")
     attitude_box.render(snapshot, fault_columns)
 
-    # Cards de Subsistemas
-    st.markdown("#### 🔧 Subsistemas")
-    subsys_cards.render_all(snapshot)
 
     # Rastreio Geográfico
     st.markdown("#### 🗺️ Rastreio Geográfico")

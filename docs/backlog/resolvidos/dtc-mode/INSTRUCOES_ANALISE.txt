@@ -1,0 +1,117 @@
+================================================================================
+GUIA DE UTILIZAÇÃO E ANÁLISE - CONVERSOR TRIMM & VADR
+================================================================================
+
+Este documento descreve o funcionamento do script 'conversor.py', desenvolvido 
+para automatizar a consolidação de dados do Pitch Trim Switch Monitor (TRIMM) 
+e formatar arquivos de contexto (VADR/Mishap), facilitando a investigação de 
+disparos não comandados das superfícies de controle (Aileron e Elevator).
+
+--------------------------------------------------------------------------------
+1. O QUE O SCRIPT FAZ
+--------------------------------------------------------------------------------
+O script atua como um "Robô de Triagem" processando lotes de pastas de voo:
+- Vasculha a raiz buscando subpastas não analisadas (qualquer nome, ex: "5941").
+- Entra em cada subpasta e localiza os arquivos "TRIMM*.DMP".
+- Converte, consolida e analisa matematicamente todos os DMPs em milissegundos.
+- Calcula o "Threshold" (taxa de gravação) e identifica atuações não comandadas.
+- Localiza arquivos do tipo "*Mishap Time History Data Set.csv" (VADR) e os
+  formata para Excel (xlsx), ocultando dezenas de colunas irrelevantes.
+- Gera os relatórios de saída enumerados para a ordem exata de leitura.
+- Renomeia a subpasta adicionando "_SUSPEITA_DISPARO" ou "_SEM_DISPARO", para
+  que o analista saiba instantaneamente onde focar seus esforços.
+
+* NOTA IMPORTANTE: O script não depende do VADR para funcionar. Se a pasta 
+  contiver apenas os DMPs, o script processará e gerará os relatórios do TRIMM 
+  normalmente (pulando a etapa de formatação do VADR sem gerar erros).
+
+--------------------------------------------------------------------------------
+2. COMO USAR / EXECUTAR
+--------------------------------------------------------------------------------
+PRÉ-REQUISITOS:
+- Ter o Python instalado (Windows, macOS ou Linux).
+- Ter as bibliotecas 'pandas' e 'openpyxl' (comando: pip install pandas openpyxl).
+
+PASSO A PASSO DA EXECUÇÃO:
+1. Coloque o arquivo 'conversor.py' na pasta "raiz" do seu projeto.
+2. Jogue junto do script as subpastas dos voos que deseja analisar (ex: pasta 
+   "5919", pasta "Aeronave 5432"). O script lerá os DMPs e CSVs de dentro delas.
+3. Abra o terminal na pasta raiz:
+   - No Windows: Abra o Prompt de Comando (CMD) ou PowerShell.
+   - No macOS: Abra o aplicativo "Terminal".
+   - No Linux: Abra o emulador de terminal do seu ambiente (ex: GNOME Terminal).
+4. Digite o comando de execução:
+   - No Windows: python conversor.py
+   - No macOS ou Linux: python3 conversor.py
+5. Aguarde. O console mostrará o status. Ao final, observe os nomes das pastas 
+   alterados.
+
+* NOTA DE SEGURANÇA: O script ignora pastas que já possuam os sufixos 
+  "_SUSPEITA_DISPARO" ou "_SEM_DISPARO". Se quiser reprocessar uma pasta, apague
+  este sufixo do nome dela antes de executar o script. Feche arquivos abertos!
+
+--------------------------------------------------------------------------------
+3. ALCANCE DA INVESTIGAÇÃO: TRIMM vs VADR
+--------------------------------------------------------------------------------
+É essencial compreender que o script processa dois universos de dados complementares, 
+porém com objetivos analíticos distintos:
+
+A) APENAS COM O TRIMM (Identifica A FALHA)
+Os arquivos DMP respondem "O QUÊ" e "QUANDO". Eles provam que a falha existiu.
+O TRIMM é autossuficiente para atestar, de forma factual e irrefutável, que 
+ocorreu um disparo não comandado e em qual milissegundo exato isso ocorreu. 
+Se o objetivo for apenas comprovar a anomalia para aterrar a aeronave ou indicar 
+manutenção corretiva no atuador, apenas os relatórios do TRIMM bastam.
+
+B) COM O VADR (Identifica A CAUSA RAIZ)
+Os arquivos CSV respondem o "POR QUÊ". O TRIMM é cego para o resto do avião.
+Se a análise parar no TRIMM, a manutenção pode trocar o atuador, mas se a causa 
+foi, por exemplo, um surto no barramento elétrico, a falha voltará a acontecer. 
+O VADR cruza informações de mais de 200 parâmetros da aeronave. Somente 
+verificando o cenário do VADR é possível determinar se o gatilho daquele pulo 
+no compensador foi um pico estrutural de Força G (turbulência), uma queda de 
+voltagem (pane elétrica) ou interferência de outro sistema.
+
+--------------------------------------------------------------------------------
+4. FLUXO DE LEITURA E ANÁLISE PASSO A PASSO
+--------------------------------------------------------------------------------
+Após a execução do script, entre em uma pasta renomeada com "_SUSPEITA_DISPARO".
+Você encontrará arquivos numerados. Siga esta ordem de investigação:
+
+>> PASSO 1: O ALERTA (Abra o arquivo 01_Report_TRIMM.xlsx)
+- O que é: O painel gerencial daquele voo.
+- O que buscar: Verifique os contadores na esquerda (Aileron_Counter e 
+  Elevator_Counter). Olhe os blocos gerados na direita. Eles mostram a "Linha", 
+  o "Tempo" (horário exato, ex: 19:22:35) e a "Posição" exata da superfície no 
+  milissegundo em que o disparo anômalo foi detectado.
+- Anote: Anote em um bloco de notas os horários exatos (Tempo) das ocorrências.
+- Verificação: Cheque se a "Flag de Threshold" está <= 200ms. Se estiver muito 
+  alta (ex: 500ms), a gravação do voo teve falhas e o alerta pode ser falso.
+
+>> PASSO 2: O CENÁRIO (Abra o arquivo 02_VADR_Formatado.xlsx) *Se existir
+- O que é: O despejo de dados de todos os sistemas da aeronave (Mishap).
+- O que buscar: Role a planilha até encontrar na coluna "TIME" o horário exato 
+  que você anotou no Passo 1. Analise o que o avião estava sofrendo neste 
+  momento específico (e alguns segundos antes):
+  - Turbulência extrema? Olhe as cargas G (NZ, NY, NX).
+  - Problema elétrico? Observe quedas em FLOWVOLT ou barramentos.
+  - Como estavam a velocidade (CAS/MACH) e a altitude (PALT)?
+  - Posições primárias do manche e atuadores (ELE_POS, AIL_POS, Stick_AFT...).
+- Objetivo: Descobrir o fator externo/sistêmico (a causa raiz) que causou a 
+  anomalia do compensador.
+
+>> PASSO 3: O MERGULHO (Abra o arquivo 03_TRIMM_Consolidado.xlsx)
+- O que é: O banco de dados completo do comportamento do compensador (alta 
+  frequência, focado apenas no sistema TRIMM).
+- O que buscar: Use este arquivo SOMENTE se precisar entender o comportamento 
+  milissegundo a milissegundo antes, durante e depois da falha. Ideal para 
+  plotar gráficos de comportamento e cruzamento de posição do compensador vs. 
+  posição do botão do manche (Stick_FWD / Stick_AFT).
+
+>> PASSO 4: INTEGRAÇÃO (Arquivo 04_TRIMM_Dados_Brutos.csv)
+- O que é: O formato bruto em texto para sistemas.
+- Uso prático: Arquivo de backup ou ponte. Use apenas se for exportar os dados
+  para processamento em outra ferramenta pesada de engenharia (MATLAB, PowerBI, etc).
+
+================================================================================
+Fim das Instruções.

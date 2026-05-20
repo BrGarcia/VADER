@@ -222,16 +222,23 @@ class AttitudeBox:
 
         # Dados de Voo
         pitch, roll, altitude, speed, nz, aoa = _safe("APA"), _safe("ARA"), _safe("BALT", _safe("PALT")), _safe("MACH", _safe("AS")), _safe("NZ"), _safe("AOA")
+        ldg, wow = int(_safe("LDG")), int(_safe("WOW"))
         
         # Dados de Motor
         q, itt, ng, np, ff, ot, op, pcl = _safe("Q"), _safe("ITT"), _safe("NG"), _safe("NP"), _safe("FF"), _safe("OT"), _safe("OP"), _safe("PCL")
+
+        # Rótulos e cores dinâmicas para WOW/LDG
+        gear_label = "ABAIXADO" if ldg == 0 else "RECOLHIDO"
+        gear_color = "#00FF88" if ldg == 0 else "#FFC107"
+        phase_label = "SOLO" if wow == 1 else "AR"
+        phase_color = "#A07850" if wow == 1 else "#4A90D9"
 
         col_metrics, col_horizon, col_engine = st.columns([1, 2, 1])
 
         with col_metrics:
             nz_color = COLORS["warning"] if abs(nz) > NZ_ALERT_THRESHOLD else "#00FF88"
             html_metrics = (
-                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3; height: 320px; display: flex; flex-direction: column; justify-content: center;">'
+                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3; height: 380px; display: flex; flex-direction: column; justify-content: center;">'
                 f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ALTITUDE (BALT)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:#00FF88;">{altitude:,.0f} ft</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">VELOCIDADE (MACH)</div>'
@@ -242,6 +249,8 @@ class AttitudeBox:
                 f'<div style="font-size:1.4rem; font-weight:bold; color:{nz_color};">{nz:+.2f}G</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ATAQUE (AOA)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:#FAFAFA;">{aoa:.1f}°</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">SOLO / TREM (WOW/LDG)</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{phase_color};">{phase_label}</span> / <span style="color:{gear_color};">{gear_label}</span></div>'
                 f'</div>'
             )
             st.markdown(html_metrics, unsafe_allow_html=True)
@@ -273,13 +282,15 @@ class AttitudeBox:
             self._fault_panel.render(status_list)
 
         with col_engine:
-            # Lógica de cor para PCL
+            # Lógica de cor para PCL e FF
             if pcl < 0: pcl_color = "#4A90D9" # Idle
             elif pcl < 130: pcl_color = "#00FF88" # Cruise
             else: pcl_color = "#FF4B4B" # Max
 
+            ff_color = "#FF4B4B" if ff > 480 else "#FFC107" if ff > 420 else "#00FF88"
+
             html_engine = (
-                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3; height: 320px; display: flex; flex-direction: column; justify-content: center;">'
+                f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3; height: 380px; display: flex; flex-direction: column; justify-content: center;">'
                 f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">TORQUE (Q)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(q, "Q")};">{q:.1f}%</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ITT</div>'
@@ -288,6 +299,8 @@ class AttitudeBox:
                 f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ng, "NG")};">{ng:.1f}</span>/<span style="color:{_get_engine_color(np, "NP")};">{np:.1f}</span></div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">MANETE (PCL)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:{pcl_color};">{pcl:.1f}°</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">FLUXO COMB. (FF)</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{ff_color};">{ff:.0f} kg/h</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">OIL T / P</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ot, "OT")};">{ot:.0f}°</span>/<span style="color:{_get_engine_color(op, "OP")};">{op:.0f}P</span></div>'
                 f'</div>'
@@ -450,132 +463,4 @@ class EICASPanel:
         return active
 
 
-# -----------------------------------------------------------------------
-# Cards de Subsistemas — Fase 2
-# -----------------------------------------------------------------------
 
-class SubsystemCards:
-    """Renderiza os cards informativos do Box Inferior."""
-
-    _CARD_BASE = (
-        "background:#0E1117; border:1px solid #2D2D2D; border-radius:8px; "
-        "padding:12px; text-align:center; font-family:monospace; "
-        "height:130px; display:flex; flex-direction:column; justify-content:center; "
-        "box-sizing:border-box;"
-    )
-
-    def render_all(self, snapshot: pd.Series) -> None:
-        """Renderiza os quatro cards de subsistemas lado a lado."""
-
-        def _safe(key: str, fallback: float = 0.0) -> float:
-            val = snapshot.get(key, fallback)
-            try:
-                f = float(val)
-                return f if f == f else fallback
-            except Exception:
-                return fallback
-
-        ldg = int(_safe("LDG"))
-        wow = int(_safe("WOW"))
-        nz  = _safe("NZ")
-
-        col_gear, col_nz, col_engine, col_pcl = st.columns(4)
-
-        with col_gear:
-            self.render_landing_gear_card(ldg, wow)
-        with col_nz:
-            self.render_structural_load_card(nz)
-        with col_engine:
-            self.render_engine_summary_card(snapshot)
-        with col_pcl:
-            self._render_pcl_card(_safe("PCL"))
-
-    def render_landing_gear_card(self, ldg: int, wow: int) -> None:
-        """Exibe o card do Trem de Pouso com identificação das variáveis."""
-        gear_label = "ABAIXADO" if ldg == 0 else "RECOLHIDO"
-        gear_color = "#00FF88" if ldg == 0 else "#FFC107"
-        phase_label = "SOLO" if wow == 1 else "AR"
-        phase_color = "#A07850" if wow == 1 else "#4A90D9"
-
-        st.markdown(
-            f"<div style='{self._CARD_BASE}'>"
-            f"  <div style='font-size:0.65rem;color:#888;letter-spacing:1px;'>TREM DE POUSO</div>"
-            f"  <div style='font-size:1.0rem;font-weight:bold;color:{gear_color}; margin-top:4px;'><span style='color: #888; font-size: 0.75rem;'>LDG:</span> {gear_label}</div>"
-            f"  <div style='font-size:1.0rem;font-weight:bold;color:{phase_color}; margin-top:2px;'><span style='color: #888; font-size: 0.75rem;'>WOW:</span> {phase_label}</div>"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
-
-    def render_structural_load_card(self, nz: float) -> None:
-        """Exibe card de Carga Estrutural (Força G). Alerta visual se NZ > 4.0G."""
-        alert = abs(nz) > NZ_ALERT_THRESHOLD
-        nz_color = "#FF4B4B" if alert else "#00FF88"
-        border_color = "#FF4B4B" if alert else "#2D2D2D"
-        alert_text = "<div style='font-size:0.65rem;color:#FF4B4B;'>⚠ LIMITE ESTRUTURAL</div>" if alert else ""
-
-        st.markdown(
-            f"<div style='{self._CARD_BASE} border-color:{border_color};'>"
-            f"  <div style='font-size:0.65rem;color:#888;letter-spacing:1px;'>CARGA ESTRUTURAL</div>"
-            f"  <div style='font-size:1.6rem;font-weight:bold;color:{nz_color};'>{nz:+.2f} G</div>"
-            f"  {alert_text}"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
-
-    def render_engine_summary_card(self, snapshot: pd.Series) -> None:
-        """Exibe card resumido do motor: ITT, FF e status geral."""
-        def _safe(k: str) -> float:
-            v = snapshot.get(k, 0)
-            try:
-                f = float(v)
-                return f if f == f else 0.0
-            except Exception:
-                return 0.0
-
-        itt = _safe("ITT")
-        ff  = _safe("FF")
-        ng  = _safe("NG")
-
-        itt_color = "#FF4B4B" if itt > 1000 else "#FFC107" if itt > 850 else "#00FF88"
-        ff_color  = "#FF4B4B" if ff  > 480  else "#FFC107" if ff  > 420 else "#00FF88"
-
-        st.markdown(
-            f"<div style='{self._CARD_BASE}'>"
-            f"  <div style='font-size:0.65rem;color:#888;letter-spacing:1px;'>MOTOR</div>"
-            f"  <div style='font-size:0.8rem;margin-top:4px;'>"
-            f"    <span style='color:#888;'>ITT </span>"
-            f"    <span style='color:{itt_color};font-weight:bold;'>{itt:.0f}°C</span>"
-            f"  </div>"
-            f"  <div style='font-size:0.8rem;margin-top:2px;'>"
-            f"    <span style='color:#888;'>FF &nbsp;</span>"
-            f"    <span style='color:{ff_color};font-weight:bold;'>{ff:.0f} kg/h</span>"
-            f"  </div>"
-            f"  <div style='font-size:0.8rem;margin-top:2px;'>"
-            f"    <span style='color:#888;'>Ng &nbsp;</span>"
-            f"    <span style='color:#FAFAFA;'>{ng:.1f}%</span>"
-            f"  </div>"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
-
-    def _render_pcl_card(self, pcl: float) -> None:
-        """Exibe a posição da Manete de Potência (PCL)."""
-        # PCL range operacional: -20 a +179°
-        # Zonas aproximadas: < 0° = Ground Idle, 0-60° = Flight Idle→Cruise, > 130° = Max Power
-        if pcl < 0:
-            pcl_label, pcl_color = "GROUND IDLE", "#4A90D9"
-        elif pcl < 60:
-            pcl_label, pcl_color = "IDLE / CRUISE", "#00FF88"
-        elif pcl < 130:
-            pcl_label, pcl_color = "CRUISE / CLIMB", "#FFC107"
-        else:
-            pcl_label, pcl_color = "MAX POWER", "#FF4B4B"
-
-        st.markdown(
-            f"<div style='{self._CARD_BASE}'>"
-            f"  <div style='font-size:0.65rem;color:#888;letter-spacing:1px;'>MANETE (PCL)</div>"
-            f"  <div style='font-size:1.6rem;font-weight:bold;color:{pcl_color};'>{pcl:.1f}°</div>"
-            f"  <div style='font-size:0.7rem;color:{pcl_color};margin-top:2px;'>{pcl_label}</div>"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
