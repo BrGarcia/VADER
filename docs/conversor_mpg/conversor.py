@@ -99,9 +99,9 @@ def main():
         
     print("\nOpções de processamento:")
     print("1. Converter normalmente (Cores Originais)")
-    print("2. Converter e rotacionar 90º à direita (Para EICAS)")
+    print("2. Converter, rotacionar 90º à direita e remover áudio (Para EICAS)")
     print("3. Converter para Escala de Cinza (Ideal para HUD - reduz manchas de cor)")
-    print("4. Converter, rotacionar 90º E aplicar Escala de Cinza")
+    print("4. Converter, rotacionar 90º à direita, aplicar Escala de Cinza e remover áudio")
     
     opcao = input("\nEscolha uma opção [1/2/3/4]: ").strip()
     rotacionar = (opcao in ["2", "4"])
@@ -171,9 +171,12 @@ def main():
         #       35+ = Vídeo começa a ficar borrado/pixelado
         "-crf", "28",
         # =====================================================================
-        
-        "-c:a", "aac"
     ]
+    
+    if rotacionar:
+        cmd_convert.append("-an")
+    else:
+        cmd_convert.extend(["-c:a", "aac"])
     
     # =====================================================================
     # APLICANDO FILTROS VISUAIS

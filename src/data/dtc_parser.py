@@ -1,9 +1,4 @@
-"""
-dtc_parser.py
-Módulo responsável pela leitura e consolidação dos arquivos binários de falha
-do DTC (Pitch Trim Switch Monitor - TRIMM*.DMP).
-Integra a lógica do script conversor original ao ecossistema do VADER.
-"""
+from __future__ import annotations
 
 import os
 import pandas as pd
