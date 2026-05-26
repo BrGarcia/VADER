@@ -6,7 +6,6 @@ import pandas as pd
 from src.data.data_loader import DataLoader
 from src.ui.plots import TimelinePlotter
 from src.ui.components import AttitudeBox, TimeController
-from src.ui.components.flight_map import FlightMap
 from src.ui.views.landing import _get_recent_files, _LOADER
 
 _PLOTTER = TimelinePlotter()
@@ -141,12 +140,6 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     st.markdown("#### ✈️ Atitude e Dados Críticos")
     attitude_box.render(snapshot, fault_columns)
 
-
-    # Rastreio Geográfico
-    st.markdown("#### 🗺️ Rastreio Geográfico")
-    with st.container(border=True):
-        f_map = FlightMap()
-        f_map.render(df, snapshot)
 
     # Painel inferior (configurações + nova análise)
     render_bottom_panel(df)

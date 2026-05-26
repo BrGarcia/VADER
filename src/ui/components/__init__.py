@@ -249,7 +249,7 @@ class AttitudeBox:
                 f'<div style="font-size:1.4rem; font-weight:bold; color:{nz_color};">{nz:+.2f}G</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ATAQUE (AOA)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:#FAFAFA;">{aoa:.1f}°</div>'
-                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">SOLO / TREM (WOW/LDG)</div>'
+                f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">WOW / LDG</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{phase_color};">{phase_label}</span> / <span style="color:{gear_color};">{gear_label}</span></div>'
                 f'</div>'
             )
