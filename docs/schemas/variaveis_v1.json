@@ -1,0 +1,222 @@
+{
+    "AS+": {
+        "descricao": "Velocidade do Ar Máxima",
+        "faixa": "0 a 1023,9375",
+        "resolucao": "0,625",
+        "unidade_de_medida": "nós",
+        "matriz_validade": "ASV=3"
+    },
+    "NZ": {
+        "descricao": "Aceleração Vertical",
+        "faixa": "-5 a +5",
+        "resolucao": "0,01",
+        "unidade_de_medida": "G",
+        "matriz_validade": null
+    },
+    "NY": {
+        "descricao": "Aceleração Lateral",
+        "faixa": "-2 a +2",
+        "resolucao": "0,01",
+        "unidade_de_medida": "G",
+        "matriz_validade": null
+    },
+    "NX": {
+        "descricao": "Aceleração Longitudinal",
+        "faixa": "-5 a +5",
+        "resolucao": "0,01",
+        "unidade_de_medida": "G",
+        "matriz_validade": null
+    },
+    "AIL_POS": {
+        "descricao": "Posição do aileron",
+        "faixa": "-17 a +15,9",
+        "resolucao": "0,32",
+        "unidade_de_medida": "graus",
+        "matriz_validade": null
+    },
+    "ELE_POS": {
+        "descricao": "Posição do profundor",
+        "faixa": "-18,2 a +12,1",
+        "resolucao": "0,32",
+        "unidade_de_medida": "graus",
+        "matriz_validade": null
+    },
+    "RUD_POS": {
+        "descricao": "Posição do leme",
+        "faixa": "-25 a +25",
+        "resolucao": "0,5",
+        "unidade_de_medida": "graus",
+        "matriz_validade": null
+    },
+    "AIRBRK": {
+        "descricao": "Freio aerodinâmico",
+        "faixa": "1/0",
+        "unidade_de_medida": "estado lógico",
+        "comentarios": "Nível 1 (aberto) / 0 (terra)",
+        "matriz_validade": null
+    },
+    "ATP": {
+        "descricao": "Compensação do aileron",
+        "faixa": "0 a 100",
+        "unidade_de_medida": "%",
+        "comentarios": "+25 a -25 graus",
+        "matriz_validade": "ETPV=3"
+    },
+    "ETP": {
+        "descricao": "Compensação do profundor",
+        "faixa": "0 a 100",
+        "unidade_de_medida": "%",
+        "comentarios": "+25 a -25 graus",
+        "matriz_validade": "ETPV=3"
+    },
+    "RTP": {
+        "descricao": "Compensação do leme",
+        "faixa": "0 a 100",
+        "unidade_de_medida": "%",
+        "comentarios": "+12,5 a -12,5 graus",
+        "matriz_validade": "RTPV=3"
+    },
+    "APA": {
+        "descricao": "Ângulo de arfagem",
+        "faixa": "-180 a +179,99",
+        "unidade_de_medida": "graus",
+        "matriz_validade": "APAV=3"
+    },
+    "ARA": {
+        "descricao": "Ângulo de rolamento",
+        "faixa": "-180 a +179,99",
+        "unidade_de_medida": "graus",
+        "matriz_validade": "ARAV=3"
+    },
+    "AYR": {
+        "descricao": "Taxas de atitude (Guinada)",
+        "faixa": "-512 a +511,98",
+        "unidade_de_medida": "graus/s",
+        "matriz_validade": "AYRV=3"
+    },
+    "APR": {
+        "descricao": "Taxas de atitude (Arfagem)",
+        "faixa": "-512 a +511,98",
+        "unidade_de_medida": "graus/s",
+        "matriz_validade": "APRV=3"
+    },
+    "ARR": {
+        "descricao": "Taxas de atitude (Rolamento)",
+        "faixa": "-512 a +511,98",
+        "unidade_de_medida": "graus/s",
+        "matriz_validade": "ARRV=3"
+    },
+    "MAG_HDG": {
+        "descricao": "Proa magnética",
+        "faixa": "-180 a +180",
+        "unidade_de_medida": "graus",
+        "matriz_validade": "MAG_HDGV=3"
+    },
+    "GPSLAT": {
+        "descricao": "Latitude GPS",
+        "faixa": "-90 a +90",
+        "unidade_de_medida": "graus",
+        "matriz_validade": "LATV"
+    },
+    "GPSLONG": {
+        "descricao": "Longitude GPS",
+        "faixa": "-180 a +180",
+        "unidade_de_medida": "graus",
+        "matriz_validade": "LONGV"
+    },
+    "LDEV": {
+        "descricao": "Desvio LOC",
+        "faixa": "N/A",
+        "unidade_de_medida": "DDM",
+        "matriz_validade": "LDEVV"
+    },
+    "GSDEV": {
+        "descricao": "Desvio GS",
+        "faixa": "N/A",
+        "unidade_de_medida": "DDM",
+        "matriz_validade": "GSDEVV"
+    },
+    "PALT": {
+        "descricao": "Altitude pressão",
+        "faixa": "0 a +131071",
+        "unidade_de_medida": "ft",
+        "matriz_validade": "PALTV"
+    },
+    "BALT": {
+        "descricao": "Altitude barométrica",
+        "faixa": "0 a +131071",
+        "unidade_de_medida": "ft",
+        "matriz_validade": "BALTV"
+    },
+    "MACH": {
+        "descricao": "Número de Mach",
+        "faixa": "0 a +4,095",
+        "unidade_de_medida": "M",
+        "matriz_validade": "MACHV"
+    },
+    "ALTR": {
+        "descricao": "Taxa de altitude",
+        "faixa": "-32768 a +32754",
+        "unidade_de_medida": "ft/min",
+        "matriz_validade": "ALTRV=3"
+    },
+    "TPRES": {
+        "descricao": "Pressão Total",
+        "faixa": "0 a 2047,9",
+        "unidade_de_medida": "hPa",
+        "matriz_validade": "TPRESV=3"
+    },
+    "SPRES": {
+        "descricao": "Pressão Estática",
+        "faixa": "0 a 2047,9",
+        "resolucao": "1",
+        "unidade_de_medida": "hPa",
+        "matriz_validade": "SPRESV=3"
+    },
+    "Q": {
+        "descricao": "Torque medido",
+        "faixa": "0 a 255",
+        "resolucao": "1",
+        "unidade_de_medida": "%",
+        "matriz_validade": "QV"
+    },
+    "QA": {
+        "descricao": "Torque exigido (PMU)",
+        "faixa": "0 a 255",
+        "resolucao": "1",
+        "unidade_de_medida": "%",
+        "matriz_validade": "QAV"
+    },
+    "QT": {
+        "descricao": "Torque controle PMU",
+        "faixa": "0 a 255",
+        "resolucao": "1",
+        "unidade_de_medida": "%",
+        "matriz_validade": "QTV"
+    },
+
+    "AOA": {
+        "descricao": "Ângulo de ataque",
+        "faixa": "-180 a +179,8",
+        "unidade_de_medida": "graus",
+        "matriz_validade": "AOAV=3"
+    },
+    "FLAP": {
+        "descricao": "Posição do flape",
+        "faixa": "0 e 2",
+        "unidade_de_medida": "octal",
+        "matriz_validade": "FLAPV=0"
+    },
+    "RAD_ALT": {
+        "descricao": "Radioaltímetro",
+        "faixa": "0 a +5000",
+        "unidade_de_medida": "ft",
+        "matriz_validade": "RAD_ALTV=3"
+    },
+    "EMER": {
+        "descricao": "Tensão do barramento de emergência",
+        "faixa": "0 a 31,875",
+        "unidade_de_medida": "VDC",
+        "matriz_validade": "EMERV=3"
+    }
+}

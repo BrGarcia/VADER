@@ -1,0 +1,303 @@
+{
+    "meta": {
+        "description": "Schema de telemetria EMB-314 baseado em CSV fornecido",
+        "validity_suffix": "V",
+        "notes": "Campos terminados com V indicam validade/qualidade do dado"
+    },
+    "systems": {
+        "time": {
+            "type": "metadata",
+            "variables": [
+                "Rec #",
+                "TIME",
+                "GMT_HOUR",
+                "GMT_MIN",
+                "GMT_SEC",
+                "VADR_HOURS",
+                "VADR_MINUTES",
+                "VADR_SECOND",
+                "VADR_DAY",
+                "VADR_MONTH",
+                "VADR_YEAR",
+                "STIME"
+            ]
+        },
+        "flight_dynamics": {
+            "type": "analog",
+            "variables": [
+                "NX",
+                "NY",
+                "NZ",
+                "MACH",
+                "AS",
+                "GSDEV",
+                "AOA",
+                "AOAV",
+                "QA",
+                "QAV",
+                "Q",
+                "QV",
+                "QT",
+                "QTV",
+                "AYR",
+                "AYRV"
+            ]
+        },
+        "navigation": {
+            "type": "analog",
+            "variables": [
+                "GPSLAT",
+                "LATV",
+                "GPSLONG",
+                "LONGV",
+                "MAG_HDG",
+                "MAG_HDGV"
+            ]
+        },
+        "altimetry": {
+            "type": "analog",
+            "variables": [
+                "PALT",
+                "PALTV",
+                "RAD_ALT",
+                "RAD_ALTV",
+                "BALT",
+                "BALTV",
+                "ALTR",
+                "ALTRV"
+            ]
+        },
+        "engine": {
+            "type": "analog",
+            "variables": [
+                "NG",
+                "NGV",
+                "NP",
+                "NPV",
+                "ITT",
+                "ITTV",
+                "FF",
+                "FFV",
+                "OP",
+                "OPV",
+                "OT",
+                "OTV",
+                "T1",
+                "T1V"
+            ]
+        },
+        "fuel_and_pressure": {
+            "type": "analog",
+            "variables": [
+                "TPRES",
+                "TPRESV",
+                "SPRES",
+                "SPRESV",
+                "USPRES",
+                "USPRESV",
+                "PS_FR",
+                "PS_FRV"
+            ]
+        },
+        "environment": {
+            "type": "analog",
+            "variables": [
+                "BARO1",
+                "BARO1V",
+                "BARO2",
+                "BARO2V"
+            ]
+        },
+        "flight_controls": {
+            "type": "analog",
+            "variables": [
+                "AIL_POS",
+                "ELE_POS",
+                "RUD_POS",
+                "FLAP",
+                "FLAPV"
+            ]
+        },
+        "autopilot_and_modes": {
+            "type": "digital",
+            "variables": [
+                "MODE_AD_AID",
+                "MODE_ALIGN",
+                "MODE_INIT",
+                "MODE_MAINT",
+                "MODEV",
+                "SYS_MODE",
+                "SYS_MODEV"
+            ]
+        },
+        "landing_and_airframe": {
+            "type": "digital",
+            "variables": [
+                "WOW",
+                "LDG",
+                "CANOPY",
+                "AIRBRK",
+                "EMER",
+                "EMERV"
+            ]
+        },
+        "engine_discrete": {
+            "type": "digital",
+            "variables": [
+                "ENG_START",
+                "ENGFIRE",
+                "BLDAIR",
+                "HFPTT"
+            ]
+        },
+        "weapons": {
+            "type": "digital",
+            "variables": [
+                "CUR_WPN_CAGE",
+                "CUR_WPN_COCK",
+                "CUR_WPN_FUZE",
+                "CUR_WPN_MALF",
+                "CUR_WPN_PROF",
+                "CUR_WPN_RANG",
+                "CUR_WPN_SIGH",
+                "CUR_WPN_STAT",
+                "CUR_WPN_STEP",
+                "CUR_WPN_TRIG",
+                "CUR_WPN_WRB",
+                "CUR_WPNV",
+                "GUN_1_COCK",
+                "GUN_1_COUNT",
+                "GUN_1_MALF",
+                "GUN_1_RANGE",
+                "GUN_1_SEL",
+                "GUN_1_SIGHT",
+                "GUN_1V",
+                "GUN_2_COCK",
+                "GUN_2_COUNT",
+                "GUN_2_MALF",
+                "GUN_2_RANGE",
+                "GUN_2_SEL",
+                "GUN_2_SIGHT",
+                "GUN_2V",
+                "PY1_QUANT",
+                "PY1_RACK",
+                "PY1_STATUS",
+                "PY1_WEAPON",
+                "PY1V",
+                "PY2_QUANT",
+                "PY2_RACK",
+                "PY2_STATUS",
+                "PY2_WEAPON",
+                "PY2V",
+                "PY3_QUANT",
+                "PY3_RACK",
+                "PY3_STATUS",
+                "PY3_WEAPON",
+                "PY3V",
+                "PY4_QUANT",
+                "PY4_RACK",
+                "PY4_STATUS",
+                "PY4_WEAPON",
+                "PY4V",
+                "PY5_QUANT",
+                "PY5_RACK",
+                "PY5_STATUS",
+                "PY5_WEAPON",
+                "PY5V"
+            ]
+        },
+        "maintenance_warnings": {
+            "type": "digital",
+            "variables": [
+                "MW1_FPS1",
+                "MW1_FPS1ADC",
+                "MW1_FMNADC",
+                "MW1_FTPS1",
+                "MW1_FT1",
+                "MW1_FT5",
+                "MW1_FTOTTQ",
+                "MW1_FNG",
+                "MW1_FNP",
+                "MW1_FQ",
+                "MW1_SUBIDLE",
+                "MW1_FLUART1",
+                "MW1_FLUART2",
+                "MW1_FLARINC",
+                "MW1_FOATADC",
+                "MW1_FRT5BT",
+                "MW1V",
+                "MW2_FWF",
+                "MW2_FPCL",
+                "MW2_FAPCL",
+                "MW2_FDCDIS",
+                "MW2_FSTRTDIS",
+                "MW2_FRIGDIS",
+                "MW2_FWOW",
+                "MW2_FPMADIS",
+                "MW2_NOSMM",
+                "MW2_FRCPLA",
+                "MW2_FCREEP",
+                "MW2_FDCU",
+                "MW2_FRQGT",
+                "MW2_FRQBT",
+                "MW2_FLOWVOLT",
+                "MW2_RORIGGNG",
+                "MW2V",
+                "MW3_FWFLOOP",
+                "MW3_FBALOOP",
+                "MW3_FPIUTM",
+                "MW3_FFMUSM",
+                "MW3_FPMUFDIS",
+                "MW3_FPMUWDIS",
+                "MW3_FIGNDIS",
+                "MW3_FNPCSA",
+                "MW3_FNPRDIS",
+                "MW3_FQBUGDIS",
+                "MW3_FTMWA",
+                "MW3_FPMUHW",
+                "MW3_FAILEEWR",
+                "MW3_FTTCOAT",
+                "MW3_FTTCPS1",
+                "MW3_FSHUTDIS",
+                "MW3V"
+            ]
+        },
+        "misc": {
+            "type": "mixed",
+            "variables": [
+                "ACPM",
+                "ACPMV",
+                "CLPM",
+                "CLPMV",
+                "INFM",
+                "INFMV",
+                "LDEV",
+                "LDEVV",
+                "LIPM",
+                "LIPMV",
+                "LOPM",
+                "LOPMV",
+                "RIPM",
+                "RIPMV",
+                "ROPM",
+                "ROPMV",
+                "RTP",
+                "RTPV",
+                "ATP",
+                "ATPV",
+                "APR",
+                "APRV",
+                "ARA",
+                "ARAV",
+                "ARR",
+                "ARRV"
+            ]
+        },
+        "data_quality": {
+            "type": "status",
+            "variables": [
+                "VALIDARINC"
+            ]
+        }
+    }
+}

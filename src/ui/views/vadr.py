@@ -49,7 +49,7 @@ def render_bottom_panel(df: pd.DataFrame) -> None:
             duration = df["TIME"].max() if "TIME" in df.columns else 0
             fname = st.session_state.get("current_filename", "arquivo")
             st.markdown(f"<p style='font-size: 0.7rem; margin-bottom: 0px; text-align: center;'>📄 {fname[:24]}</p>", unsafe_allow_html=True)
-            st.markdown(f"<p style='font-size: 0.7rem; text-align: center;'>🔢 {n_rows:,} registros | ⏱ {duration:.1f}s</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='font-size: 0.7rem; text-align: center;'>🔢 {n_rows:,} registros | ⏱ {duration / 60:.2f} min</p>", unsafe_allow_html=True)
 
         # ── Botão Nova Análise ──
         with col_btn:
@@ -123,9 +123,9 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
 
     t_cursor = float(snapshot["TIME"]) if "TIME" in snapshot else 0
     fig.add_vline(
-        x=t_cursor,
+        x=t_cursor / 60,
         line=dict(color="#FF4B4B", width=2, dash="dash"),
-        annotation_text=f"  t={t_cursor:.2f}s",
+        annotation_text=f"  t={t_cursor / 60:.2f} min",
         annotation_font=dict(color="#FF4B4B", size=11),
     )
 

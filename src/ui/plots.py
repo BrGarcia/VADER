@@ -127,8 +127,8 @@ class TimelinePlotter:
 
         fig = go.Figure()
 
-        t_min = float(df[time_column].min())
-        t_max = float(df[time_column].max())
+        t_min = float(df[time_column].min()) / 60
+        t_max = float(df[time_column].max()) / 60
 
         n = len(y_columns)
 
@@ -160,7 +160,7 @@ class TimelinePlotter:
                 hover_suffix = " (constante)"
 
             fig.add_trace(go.Scatter(
-                x=df[time_column],
+                x=df[time_column] / 60,
                 y=normalized,
                 customdata=real_vals,
                 mode="lines",
@@ -177,7 +177,7 @@ class TimelinePlotter:
             font=dict(color="#FAFAFA", family="monospace", size=12),
             hovermode="x unified",
             xaxis=dict(
-                title="Tempo (s)",
+                title="Tempo (min)",
                 showgrid=True,
                 gridcolor=COLORS["grid"],
                 color="#FAFAFA",
@@ -241,7 +241,7 @@ class TimelinePlotter:
                 continue
 
             fault_rows = df.loc[fault_mask]
-            x_vals = fault_rows["TIME"]
+            x_vals = fault_rows["TIME"] / 60
             y_vals = fault_rows[y_col] if y_col else pd.Series(
                 [0.0] * len(fault_rows), index=fault_rows.index
             )
@@ -264,7 +264,7 @@ class TimelinePlotter:
                 ),
                 hovertemplate=(
                     f"<b>⚠ FALHA: {short_name}</b><br>"
-                    f"t=%{{x:.3f}} s<br>"
+                    f"t=%{{x:.2f}} min<br>"
                     f"{y_column}=%{{y}}<extra></extra>"
                 ),
             ))
@@ -284,7 +284,7 @@ class TimelinePlotter:
         # S-05: usa coluna PHASE pré-computada; fallback para WOW se ausente
         if "PHASE" in df.columns:
             phases = df["PHASE"]
-            time_series = df["TIME"]
+            time_series = df["TIME"] / 60
         elif "WOW" in df.columns:
             wow_data = df[["TIME", "WOW"]].dropna(subset=["WOW"])
             if wow_data.empty:
@@ -293,7 +293,7 @@ class TimelinePlotter:
                 wow_data["WOW"].astype(float).fillna(0).astype(int)
                 .map({1: "ground", 0: "flight"})
             )
-            time_series = wow_data["TIME"]
+            time_series = wow_data["TIME"] / 60
         else:
             return fig
 
