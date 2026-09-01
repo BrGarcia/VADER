@@ -21,26 +21,28 @@ class DtcParser:
         return sorted(path.glob("TRIMM*.DMP"))
 
     @classmethod
-    def ler_arquivo(cls, caminho_arquivo: str | Path) -> pd.DataFrame:
+    def ler_arquivo(cls, caminho_arquivo: str | Path, falhas: list[str] | None = None) -> pd.DataFrame:
         """Lê um único arquivo DMP, nomeia as colunas e adiciona a origem."""
         caminho = Path(caminho_arquivo)
         try:
             df = pd.read_csv(
-                caminho, 
-                sep=";", 
-                header=None, 
-                names=cls.COLUNAS_TRIMM, 
+                caminho,
+                sep=";",
+                header=None,
+                names=cls.COLUNAS_TRIMM,
                 index_col=False,
                 on_bad_lines='skip'
             )
-            
+
             if "Descarte_Delimitador" in df.columns:
                 df = df.drop(columns=["Descarte_Delimitador"])
-                
+
             df.insert(0, "Origem_Arquivo", caminho.name)
             return df
         except Exception as e:
             print(f"Erro ao ler {caminho.name}: {e}")
+            if falhas is not None:
+                falhas.append(caminho.name)
             return pd.DataFrame()
 
     @classmethod
@@ -49,21 +51,23 @@ class DtcParser:
         arquivos = cls.localizar_arquivos(diretorio)
         if not arquivos:
             return pd.DataFrame()
-            
-        lista_dfs = [cls.ler_arquivo(arq) for arq in arquivos]
-        return cls._consolidar(lista_dfs, len(arquivos))
+
+        falhas: list[str] = []
+        lista_dfs = [cls.ler_arquivo(arq, falhas) for arq in arquivos]
+        return cls._consolidar(lista_dfs, len(arquivos), falhas)
 
     @classmethod
     def ingest_files(cls, uploaded_files: list) -> pd.DataFrame:
         """Processa uma lista de arquivos em memória (ex: UploadedFile do Streamlit)."""
         lista_dfs = []
+        falhas: list[str] = []
         for uf in uploaded_files:
             try:
                 df = pd.read_csv(
-                    uf, 
-                    sep=";", 
-                    header=None, 
-                    names=cls.COLUNAS_TRIMM, 
+                    uf,
+                    sep=";",
+                    header=None,
+                    names=cls.COLUNAS_TRIMM,
                     index_col=False,
                     on_bad_lines='skip'
                 )
@@ -74,15 +78,32 @@ class DtcParser:
                     lista_dfs.append(df)
             except Exception as e:
                 print(f"Erro ao ler arquivo em memória {uf.name}: {e}")
-                
-        return cls._consolidar(lista_dfs, len(uploaded_files))
+                falhas.append(uf.name)
+
+        return cls._consolidar(lista_dfs, len(uploaded_files), falhas)
 
     @classmethod
-    def _consolidar(cls, lista_dfs: list[pd.DataFrame], qtd_arquivos: int) -> pd.DataFrame:
+    def _consolidar(
+        cls,
+        lista_dfs: list[pd.DataFrame],
+        qtd_arquivos: int,
+        falhas: list[str] | None = None,
+    ) -> pd.DataFrame:
         """Aplica a conversão de tempo e gera as flags de disparo."""
+        falhas = falhas or []
         lista_dfs = [df for df in lista_dfs if not df.empty]
         if not lista_dfs:
-            return pd.DataFrame()
+            df_vazio = pd.DataFrame()
+            df_vazio.attrs["metadata"] = {
+                "Total de Arquivos": qtd_arquivos,
+                "Total de Registros": 0,
+                "Threshold (ms)": 0,
+                "Disparos Aileron": 0,
+                "Disparos Elevator": 0,
+                "Status": "N/A",
+                "Falhas": falhas,
+            }
+            return df_vazio
             
         df_final = pd.concat(lista_dfs, ignore_index=True)
         
@@ -130,7 +151,8 @@ class DtcParser:
             "Threshold (ms)": threshold_ms,
             "Disparos Aileron": aileron_count,
             "Disparos Elevator": elevator_count,
-            "Status": "🚨 SUSPEITA DE DISPARO" if (aileron_count > 0 or elevator_count > 0) else "✅ NORMAL"
+            "Status": "🚨 SUSPEITA DE DISPARO" if (aileron_count > 0 or elevator_count > 0) else "✅ NORMAL",
+            "Falhas": falhas,
         }
         
         return df_final

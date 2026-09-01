@@ -112,6 +112,14 @@ def render_completa() -> None:
     df_dtc = st.session_state.get("dtc_df")
     if df_dtc is not None and not df_dtc.empty:
         meta = df_dtc.attrs.get("metadata", {})
+
+        falhas = meta.get("Falhas", [])
+        if falhas:
+            st.warning(
+                f"⚠️ {len(falhas)} arquivo(s) DMP não puderam ser lidos e foram excluídos "
+                f"desta análise: {', '.join(falhas)}"
+            )
+
         v_a = meta.get('Disparos Aileron', 0)
         v_e = meta.get('Disparos Elevator', 0)
         

@@ -93,6 +93,23 @@ Triagem item a item do débito conhecido, comparando o que os documentos afirmam
 
 > Ambos locais na branch `feature/modo-vadr`, ainda **não enviados** para `origin`.
 
+## 8. Fase C — Frente escolhida: revisão do fluxo TRIMM/DTC (01/09/2026)
+
+**Achado prévio à revisão:** `feature/modo-vadr` diverge de `af47022` (8 commits atrás) junto com uma segunda linha independente — `fix/auditoria-tecnica` → `development` → `feature/correcao-fluidez-grafico-temporal` — que já implementou os 28 itens do relatorio de auditoria daquela linha (equivalente ao nosso `relatorio_plan.md`, nunca executado aqui) e inclui uma correção pontual em `dtc_parser.py` (BUG-07). As duas linhas nunca foram mescladas entre si. Decisão tomada: trazer só o fix pontual do DTC para cá, sem reconciliar as branches por inteiro (fica em aberto).
+
+**Revisão do fluxo TRIMM/DTC:**
+
+| Achado | Ação |
+|---|---|
+| BUG-07 — threshold de detecção calculado só com as 2 primeiras amostras UTC (frágil a outlier pontual) | **Corrigido** (`48ea9da`) — portado isoladamente de `fix/auditoria-tecnica`, sem trazer o resto daquela auditoria |
+| `trimm_converter.py`/`trimm_analysis.py` não são importados em lugar nenhum do código; `TRIMM_IMPLEMENTATION.md` já os descrevia como fase exploratória superada pelo `DtcParser` | **Arquivados** em `archive/` — mesma conclusão independente da outra branch (lá catalogado como DEAD-02/DEAD-03) |
+| Falhas ao ler um `.DMP` eram engolidas com só um `print()` no console — o operador na UI nunca via o aviso, risco de falso negativo numa ferramenta de detecção de segurança | **Corrigido** — `DtcParser` agora propaga a lista de arquivos que falharam via `metadata["Falhas"]`, e `views/dtc.py`/`views/completa.py` mostram `st.warning()` |
+| DUP-02 (estilos DTC duplicados entre `dtc.py`/`completa.py`) | Confirmado sem divergência entre as duas cópias; continua pendente no `relatorio_plan.md`, não é bug |
+| Suspeita descartada: diff/shift cruzando fronteira de `Origem_Arquivo` na concatenação de múltiplos `.DMP` | Mesmo comportamento existe no script de referência original (baseado na macro VBA legada) — parece ser característica assumida do design, não bug |
+| `docs/dtc-mode/conversor.py` (script de referência standalone, fora do app) | Ainda tem o mesmo BUG-07 não corrigido — não é chamado pelo Streamlit, então não é urgente, mas fica registrado caso alguém ainda o use manualmente |
+
+**Commit gerado:** `48ea9da` (fix isolado do BUG-07) + commit pendente com o restante (falhas visíveis na UI + arquivamento do TRIMM legado).
+
 ---
 
 ## 7. Princípio Norteador

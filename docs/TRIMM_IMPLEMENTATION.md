@@ -2,6 +2,8 @@
 
 Este documento detalha o progresso da integração dos dados da pasta `TRIMM/` e o plano para a funcionalidade de detecção de atuação não comandada.
 
+> ⚠️ **Atualizado em 01/09/2026:** `trimm_converter.py` e `trimm_analysis.py` (Seção 1 abaixo) foram movidos para `archive/` — não são mais importados em lugar nenhum do código. O fluxo em produção hoje é `src/data/dtc_parser.py` (`DtcParser`), documentado em `docs/DTC_CONVERSOR_DMP.md`. Esta seção fica como registro histórico da fase exploratória.
+
 ## 1. Conquistas Atuais (Fase de Exploração e Pesquisa)
 
 ### 1.1. Conversão e Consolidação

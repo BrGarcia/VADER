@@ -8,7 +8,14 @@ def render_dtc(df: pd.DataFrame) -> None:
     meta = df.attrs.get("metadata", {})
     status = meta.get("Status", "N/A")
     status_color = "#FF4B4B" if "SUSPEITA" in status else "#4CAF50"
-    
+
+    falhas = meta.get("Falhas", [])
+    if falhas:
+        st.warning(
+            f"⚠️ {len(falhas)} arquivo(s) DMP não puderam ser lidos e foram excluídos "
+            f"desta análise: {', '.join(falhas)}"
+        )
+
     # Cabeçalho principal com Status fora da métrica para não cortar texto longo
     st.markdown(f"<h3 style='text-align: center; margin-top: 0px; color: {status_color};'>{status}</h3>", unsafe_allow_html=True)
     
