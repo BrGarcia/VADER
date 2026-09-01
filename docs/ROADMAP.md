@@ -16,6 +16,7 @@ Versão: 2.2 | Atualizado: 11 de Abril de 2026
 | **5** | Redesign Visual e Dashboards Avançados | Média | 🚧 Em Progresso |
 | **6** | Alertas Sonoros e Exportação | Baixa | 📋 Planejada |
 | **7** | Modo Comparativo e Analytics Avançado | Baixa | 📋 Planejada |
+| **8** | Modos de Renderização (Desempenho / Compatibilidade) | Alta | 📋 Planejada — ver `docs/backlog/modos_renderizacao.md` |
 
 ---
 
@@ -141,6 +142,23 @@ Cobertura: `tests/test_time_controller.py` (9 testes) para a lógica de playback
 
 - **S-14:** Suporte a dois DataFrames simultâneos (`df_a`, `df_b`), com o gráfico temporal sobrepondo as duas séries em cores distintas.
 - **S-15:** Delta automático entre os dois voos: variáveis com maior divergência são sinalizadas para investigação.
+
+### Fase 8 — Modos de Renderização (Planejada, prioridade alta)
+
+📄 **Plano detalhado:** `docs/backlog/modos_renderizacao.md`
+
+Introduz a escolha **⚡ Desempenho (WebGL)** / **🛡️ Compatibilidade** na landing page, atacando dois problemas levantados em 01/09/2026:
+
+- **Precisão:** a decimação atual usa *stride* uniforme, que **descarta picos estreitos** — exatamente os transientes que importam numa análise de voo. Será substituída por **envelope min/máx por bucket** (a mesma técnica de osciloscópio), compartilhada pelos dois modos.
+- **Fluidez:** 60 FPS é inalcançável no modelo server-side (piso de dezenas de ms por quadro). O modo Desempenho migra o viewport para o navegador, onde o gráfico é desenhado uma única vez e só o cursor se move.
+
+| Etapa | Branch | Entrega | Risco |
+|-------|--------|---------|-------|
+| 1 | `feature/render-modes-etapa1` | Seletor + `Scattergl` + envelope min/máx (sem JavaScript) | Baixo |
+| 2 | `feature/viewport-clientside` | Playback 60 FPS, zoom com re-decimação, seguir-cursor | Médio |
+| 3 | `feature/instrumentos-svg` | Instrumentos em SVG, tudo sincronizado a 60 FPS | Alto |
+
+> **Decisão de produto registrada:** os modos **não serão equivalentes**. Seguir-cursor e zoom sincronizado existirão só no modo Desempenho — Compatibilidade é fallback degradado, não espelho.
 
 ---
 

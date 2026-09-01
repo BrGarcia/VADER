@@ -9,11 +9,24 @@ Este documento estabelece as regras de trânsito, padrões de código e convenç
 
 Para garantir a estabilidade do sistema, operamos com um fluxo de trabalho rigoroso de controle de versão.
 
+### 1.0. Branches de longa duração — `main` + `development`
+
+> Adotado em **01/09/2026**. Antes disso o projeto acumulou quatro linhas divergentes que ficaram meses sem se falar, com trabalho duplicado e uma auditoria técnica inteira mesclada em nenhum lugar. O histórico dessa reconciliação está em `docs/RETOMADA.md` §9-12.
+
+O repositório mantém **exatamente duas branches permanentes**:
+
+| Branch | Papel |
+|--------|-------|
+| `main` | Código estável, pronto para uso na linha de voo. Avança **apenas em pontos de release**, sempre a partir de `development`. |
+| `development` | Branch de integração. É daqui que saem e para onde voltam todas as branches de trabalho. |
+
+**Toda branch de feature/bugfix é temporária:** nasce de `development`, volta para `development` por merge e é **apagada em seguida**. Branch de trabalho que sobrevive por semanas vira linha divergente — foi exatamente assim que o problema anterior se formou.
+
 ### 1.1. Regra de Ouro
 **Nenhum desenvolvedor tem permissão para fazer `commit` direto na branch `main`.** A `main` deve conter sempre código funcional, testado e pronto para uso na linha de voo.
 
 ### 1.2. Nomenclatura de Branches
-Todas as novas ramificações devem ser criadas a partir da `main` e seguir os prefixos abaixo:
+Todas as novas ramificações devem ser criadas a partir da **`development`** e seguir os prefixos abaixo:
 * `feature/...` → Para novas funcionalidades ou blocos de código. (Ex: `feature/grafico-temperatura-itt`)
 * `bugfix/...` → Para correção de erros em código já existente. (Ex: `bugfix/correcao-inversao-ldg`)
 * `refactor/...` → Para melhorias de código sem mudança de funcionalidade. (Ex: `refactor/otimizacao-leitura-pandas`)
