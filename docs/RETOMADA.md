@@ -149,7 +149,9 @@ Trazido `feature/correcao-fluidez-grafico-temporal` (que já incluía `fix/audit
 
 **Engano de processo corrigido:** o merge foi commitado por engano num branch de teste descartável (`_teste_merge_fluidez`) em vez de `feature/modo-vadr` diretamente. Corrigido com `git branch -f feature/modo-vadr _teste_merge_fluidez` — o conteúdo do commit está correto, só a branch estava errada momentaneamente; nada foi perdido.
 
-Smoke test: compila tudo, `pytest tests/` — 11 passed, `streamlit run app.py` sobe sem traceback (HTTP 200), e testei diretamente via Python (sem UI) `build_base_figure`/`TimelinePlotter.plot`/`add_fault_markers`/`add_phase_bands` e `DataLoader.ingest()` nos dois modos, com um CSV real — sem exceções. **Validação visual na UI segue não realizada** (extensão Claude-in-Chrome não conectou nesta sessão).
+Smoke test: compila tudo, `pytest tests/` — 11 passed, `streamlit run app.py` sobe sem traceback (HTTP 200), e testei diretamente via Python (sem UI) `build_base_figure`/`TimelinePlotter.plot`/`add_fault_markers`/`add_phase_bands` e `DataLoader.ingest()` nos dois modos, com um CSV real — sem exceções.
+
+**Validação visual manual (01/09/2026):** usuário rodou o app localmente (landing, VADR nos dois modos de análise, DTC, Completa) e confirmou que está tudo ok — sem regressões visuais, mapa/subsystem cards de fato ausentes conforme esperado.
 
 **Estado da branch agora:** `feature/modo-vadr` tem a auditoria técnica completa + a fluidez do gráfico, tudo local, 15 commits à frente de `origin/feature/modo-vadr`, nada enviado ainda. Próximo passo da metodologia main+development (promover esta branch, sincronizar `main`, limpar branches antigas) segue pendente de decisão do usuário.
 
