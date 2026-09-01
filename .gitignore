@@ -13,3 +13,6 @@ __pycache__/
 # Dados Locais
 Arquivos_para_analise/
 tools/
+
+# Telemetria real nao pode ser versionada (sigilo militar)
+docs/CSV/*.csv
