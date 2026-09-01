@@ -14,8 +14,13 @@ import os
 import streamlit as st
 import pandas as pd
 
-from src.ui.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD, ENGINE_LIMITS, COLORS
+from src.utils.logger import get_logger
+from src.utils.helpers import safe_numeric
+from src.ui.plots import EngineGaugePlotter, AttitudeIndicator, NZ_ALERT_THRESHOLD, ENGINE_LIMITS, COLORS, get_engine_color
 from .fault_panel import FaultPanel
+
+_log = get_logger(__name__)
+
 
 # -----------------------------------------------------------------------
 # S-02: Cache de alertas.json — carregado UMA VEZ no nível de módulo
@@ -51,7 +56,7 @@ try:
             if _msg and _level:
                 MWC_TRANSLATION[int(_k)] = (_msg, _level.lower())
 except Exception as _e:
-    print(f"[VADER] Erro ao carregar mwc_data_catalogo.json: {_e}")
+    _log.warning("Erro ao carregar mwc_data_catalogo.json: %s", _e)
 
 # -----------------------------------------------------------------------
 # Descrições humanas das colunas de falha MW* (Fase 3)
@@ -141,42 +146,20 @@ class TimeController:
         current_idx: int = st.session_state.get(self.SESSION_KEY, 0)
         current_idx = max(0, min(current_idx, n - 1))
 
-        # Layout com Colunas: Play/Pause | Slider
-        col_btn, col_sld = st.columns([1, 15])
+        # ── Linha 1: Slider (Barra de Tempo) ──
+        idx: int = st.slider(
+            "Linha do Tempo",
+            min_value=0,
+            max_value=n - 1,
+            value=current_idx,
+            key=f"{self.SESSION_KEY}_widget",
+            label_visibility="collapsed",
+        )
+        if idx != current_idx:
+            st.session_state[self.SESSION_KEY] = idx
+            st.rerun()
 
-        with col_btn:
-            # Ícone dinâmico Play ou Pause
-            btn_label = "⏸" if st.session_state.is_playing else "▶"
-            if st.button(btn_label, use_container_width=True, key="play_pause_btn"):
-                st.session_state.is_playing = not st.session_state.is_playing
-                st.rerun()
-
-        with col_sld:
-            # Slider: a chave do widget agora é independente para evitar conflito de escrita
-            idx: int = st.slider(
-                "Linha do Tempo",
-                min_value=0,
-                max_value=n - 1,
-                value=current_idx,
-                key=f"{self.SESSION_KEY}_widget",
-                label_visibility="collapsed",
-            )
-            # Sincroniza o valor do slider de volta para o estado global
-            if idx != current_idx:
-                st.session_state[self.SESSION_KEY] = idx
-                st.rerun()
-
-        # Lógica de Reprodução Automática
-        if st.session_state.is_playing:
-            import time
-            if current_idx < n - 1:
-                st.session_state[self.SESSION_KEY] = current_idx + 1
-                time.sleep(0.05)
-                st.rerun()
-            else:
-                st.session_state.is_playing = False
-                st.rerun()
-
+        # ── Lógica de Reprodução Automática (Removida a pedido) ──
         return int(st.session_state[self.SESSION_KEY])
 
     def get_snapshot(self, time_index: int) -> pd.Series:
@@ -193,32 +176,16 @@ class AttitudeBox:
     """Renderiza o Box Superior com o horizonte artificial e dados críticos."""
 
     def __init__(self) -> None:
+        # TODO(roadmap): Reativar AttitudeIndicator quando integrar horizonte artificial 3D
         self._attitude = AttitudeIndicator()
         self._fault_panel = FaultPanel()
 
     def render(self, snapshot: pd.Series, fault_columns: list[str] | None = None) -> None:
         """Renderiza painel de falhas (central) + box de motor (esquerda) + box de voo (direita)."""
 
+        # DUP-01: usa safe_numeric centralizado
         def _safe(key: str, fallback: float = 0.0) -> float:
-            val = snapshot.get(key, fallback)
-            try:
-                f = float(val)
-                return f if f == f else fallback  # NaN check
-            except Exception:
-                return fallback
-
-        # Helper para cores de alerta de motor
-        def _get_engine_color(val: float, var: str) -> str:
-            lims = ENGINE_LIMITS.get(var)
-            if not lims: return COLORS["normal"]
-            caution, warning = lims["caution"], lims["warning"]
-            if var == "OP": # Limite mínimo (Oil Press)
-                if val <= warning: return COLORS["warning"]
-                if val <= caution: return COLORS["caution"]
-            else:
-                if val >= warning: return COLORS["warning"]
-                if val >= caution: return COLORS["caution"]
-            return "#00FF88" # Verde normal se dentro dos limites
+            return safe_numeric(snapshot, key, fallback)
 
         # Dados de Voo
         pitch, roll, altitude, speed, nz, aoa = _safe("APA"), _safe("ARA"), _safe("BALT", _safe("PALT")), _safe("MACH", _safe("AS")), _safe("NZ"), _safe("AOA")
@@ -292,17 +259,17 @@ class AttitudeBox:
             html_engine = (
                 f'<div style="font-family: monospace; background: #0E1117; border: 1px solid #2D2D2D; border-radius: 8px; padding: 14px 10px; text-align: center; line-height: 1.3; height: 380px; display: flex; flex-direction: column; justify-content: center;">'
                 f'<div style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">TORQUE (Q)</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(q, "Q")};">{q:.1f}%</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{get_engine_color(q, "Q")};">{q:.1f}%</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">ITT</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold; color:{_get_engine_color(itt, "ITT")};">{itt:.0f}°C</div>'
+                f'<div style="font-size:1.4rem; font-weight:bold; color:{get_engine_color(itt, "ITT")};">{itt:.0f}°C</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">NG / NP (%)</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ng, "NG")};">{ng:.1f}</span>/<span style="color:{_get_engine_color(np, "NP")};">{np:.1f}</span></div>'
+                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{get_engine_color(ng, "NG")};">{ng:.1f}</span>/<span style="color:{get_engine_color(np, "NP")};">{np:.1f}</span></div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">MANETE (PCL)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:{pcl_color};">{pcl:.1f}°</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">FLUXO COMB. (FF)</div>'
                 f'<div style="font-size:1.4rem; font-weight:bold; color:{ff_color};">{ff:.0f} kg/h</div>'
                 f'<div style="margin-top:8px; font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:1px;">OIL T / P</div>'
-                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{_get_engine_color(ot, "OT")};">{ot:.0f}°</span>/<span style="color:{_get_engine_color(op, "OP")};">{op:.0f}P</span></div>'
+                f'<div style="font-size:1.4rem; font-weight:bold;"><span style="color:{get_engine_color(ot, "OT")};">{ot:.0f}°</span>/<span style="color:{get_engine_color(op, "OP")};">{op:.0f}P</span></div>'
                 f'</div>'
             )
             st.markdown(html_engine, unsafe_allow_html=True)
@@ -444,23 +411,6 @@ class EICASPanel:
             return (f"MWC CODE {code}", "caution")
         return ("", "normal")
 
-    def _collect_active_faults(
-        self, snapshot: pd.Series, fault_columns: list[str]
-    ) -> list[tuple[str, str, str]]:
-        """Varre as colunas MW* e retorna lista de (coluna, descrição, severidade) ativas."""
-        active = []
-        for col in fault_columns:
-            val = snapshot.get(col, 0)
-            try:
-                if float(val) == 1.0:
-                    desc, sev = FAULT_DESCRIPTIONS.get(
-                        col,
-                        (col.split("_", 1)[-1].replace("_", " "), "caution"),
-                    )
-                    active.append((col, desc, sev))
-            except Exception:
-                pass
-        return active
 
-
-
+# SubsystemCards foi removido deliberadamente da UI em commit anterior
+# (simplificação do VADR). Não reintroduzido no merge da auditoria.

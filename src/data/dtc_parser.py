@@ -1,8 +1,19 @@
+"""
+dtc_parser.py
+Módulo responsável pela leitura e consolidação dos arquivos binários de falha
+do DTC (Pitch Trim Switch Monitor - TRIMM*.DMP).
+Integra a lógica do script conversor original ao ecossistema do VADER.
+"""
+
 from __future__ import annotations
 
 import os
 import pandas as pd
 from pathlib import Path
+
+from src.utils.logger import get_logger
+
+_log = get_logger(__name__)
 
 class DtcParser:
     """Classe para leitura e processamento de arquivos TRIMM*.DMP do DTC."""
@@ -40,7 +51,7 @@ class DtcParser:
             df.insert(0, "Origem_Arquivo", caminho.name)
             return df
         except Exception as e:
-            print(f"Erro ao ler {caminho.name}: {e}")
+            _log.error("Erro ao ler %s: %s", caminho.name, e)
             if falhas is not None:
                 falhas.append(caminho.name)
             return pd.DataFrame()
@@ -77,7 +88,7 @@ class DtcParser:
                 if not df.empty:
                     lista_dfs.append(df)
             except Exception as e:
-                print(f"Erro ao ler arquivo em memória {uf.name}: {e}")
+                _log.error("Erro ao ler arquivo em memória %s: %s", uf.name, e)
                 falhas.append(uf.name)
 
         return cls._consolidar(lista_dfs, len(uploaded_files), falhas)

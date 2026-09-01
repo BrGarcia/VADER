@@ -6,6 +6,7 @@ e conversão para Parquet (cache binário colunar).
 
 from __future__ import annotations
 
+import json
 import os
 import pandas as pd
 import pyarrow as pa
@@ -41,13 +42,15 @@ class DataLoader:
         Retorna o DataFrame processado pronto para uso na UI.
         """
         parquet_path = self._get_parquet_path(filepath)
-        metadata = self._extract_metadata(filepath)
+        meta_path = self._get_meta_path(parquet_path)
 
         if self._parquet_is_fresh(filepath, parquet_path):
             df = self.load_parquet(parquet_path)
-            df.attrs["metadata"] = metadata
+            # BUG-05: carrega metadata do JSON sidecar (persiste sem CSV)
+            df.attrs["metadata"] = self._load_metadata_json(meta_path, filepath)
             return df
 
+        metadata = self._extract_metadata(filepath)
         df = self._read_raw_csv(filepath)
         df = self._resolve_time_column(df)
         df = self._coerce_types(df)
@@ -55,6 +58,8 @@ class DataLoader:
         df.attrs["metadata"] = metadata
 
         self.convert_to_parquet(df, parquet_path)
+        # BUG-05: salva metadata como JSON sidecar
+        self._save_metadata_json(meta_path, metadata)
         return df
 
     def _extract_metadata(self, filepath: str, max_header_rows: int = 8) -> dict[str, str]:
@@ -151,6 +156,14 @@ class DataLoader:
         )
         # Limpa espaços em branco nos nomes das colunas
         df.columns = [c.strip() for c in df.columns]
+
+        # IMP-09: valida estrutura mínima do CSV
+        if "TIME" not in df.columns and "STIME" not in df.columns:
+            raise ValueError(
+                f"CSV inválido: coluna TIME ou STIME não encontrada. "
+                f"Colunas disponíveis: {list(df.columns)[:10]}"
+            )
+
         return df
 
     def _coerce_types(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -219,7 +232,18 @@ class DataLoader:
     def convert_to_parquet(self, df: pd.DataFrame, parquet_path: str) -> None:
         """Serializa o DataFrame para Parquet na pasta processed/."""
         os.makedirs(os.path.dirname(os.path.abspath(parquet_path)), exist_ok=True)
-        table = pa.Table.from_pandas(df, preserve_index=False)
+
+        # Garante que colunas object com tipos mistos (ex: CAS) são convertidas para float
+        # antes da serialização Arrow — evita ArrowTypeError em colunas ambíguas
+        protected = {"TIME_STR", "PHASE"}
+        df_clean = df.copy()
+        for col in df_clean.columns:
+            if col in protected:
+                continue
+            if df_clean[col].dtype == object:
+                df_clean[col] = pd.to_numeric(df_clean[col], errors="coerce")
+
+        table = pa.Table.from_pandas(df_clean, preserve_index=False)
         pq.write_table(table, parquet_path, compression="snappy")
 
     def load_parquet(self, parquet_path: str) -> pd.DataFrame:
@@ -238,6 +262,33 @@ class DataLoader:
         if not os.path.exists(parquet_path):
             return False
         return os.path.getmtime(parquet_path) >= os.path.getmtime(csv_filepath)
+
+    @staticmethod
+    def _get_meta_path(parquet_path: str) -> str:
+        """Calcula o caminho .meta.json correspondente ao Parquet."""
+        return parquet_path.replace(".parquet", ".meta.json")
+
+    @staticmethod
+    def _save_metadata_json(meta_path: str, metadata: dict) -> None:
+        """Salva metadata como JSON sidecar ao lado do Parquet."""
+        try:
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump(metadata, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass  # Não bloqueia pipeline por falha de metadata
+
+    def _load_metadata_json(self, meta_path: str, csv_filepath: str) -> dict:
+        """Carrega metadata do JSON sidecar. Fallback para re-extração do CSV."""
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        # Fallback: re-extrai do CSV se disponível
+        if os.path.exists(csv_filepath):
+            return self._extract_metadata(csv_filepath)
+        return {}
 
     # ------------------------------------------------------------------
     # Utilitários de DataFrame

@@ -5,6 +5,10 @@ import subprocess
 import shutil
 from pathlib import Path
 
+from src.utils.logger import get_logger
+
+_log = get_logger(__name__)
+
 def get_ffmpeg_path() -> str | None:
     """Busca o ffmpeg no sistema operacional ou na pasta local tools/"""
     # Tenta encontrar instalado nativamente (MacOS/Linux/Windows PATH)
@@ -55,9 +59,9 @@ def convert_video(input_path: str | Path, output_path: str | Path, rotate: bool 
         # Executa o processo de conversão
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if result.returncode != 0:
-            print(f"Erro FFmpeg:\n{result.stderr}")
+            _log.error("Erro FFmpeg:\n%s", result.stderr)
             return False
         return True
     except Exception as e:
-        print(f"Erro ao executar ffmpeg: {e}")
+        _log.error("Erro ao executar ffmpeg: %s", e)
         return False

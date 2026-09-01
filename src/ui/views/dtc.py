@@ -1,10 +1,12 @@
 import streamlit as st
 import pandas as pd
-
-from src.ui.components.dtc_styles import aplicar_estilos
+from src.ui.components.dtc_styles import aplicar_estilos_dtc
 
 def render_dtc(df: pd.DataFrame) -> None:
     """Monta a visualização para os dados consolidados do DTC."""
+    # Aumenta o limite de células para estilização do Pandas (fix StreamlitAPIException)
+    pd.set_option("styler.render.max_elements", 1_000_000)
+
     st.markdown("<h2 style='text-align: center; color: #FF9800;'>🛠️ Análise DTC (Pitch Trim Switch)</h2>", unsafe_allow_html=True)
     
     meta = df.attrs.get("metadata", {})
@@ -59,17 +61,18 @@ def render_dtc(df: pd.DataFrame) -> None:
 
     st.markdown("---")
 
+    # DUP-02: estilos centralizados em dtc_styles.py
     # Extrato Rápido (Apenas Disparos)
     disparos_df = df[(df.get("Aileron_Test") == 1) | (df.get("Elevator_Test") == 1)]
     if not disparos_df.empty:
         st.markdown("### 🚨 Ocorrências de Disparo (Extrato Rápido)")
         st.markdown("<p style='font-size: 0.85rem; color: #bbb;'>Esta tabela mostra <b>apenas</b> os instantes exatos onde os alertas foram disparados. Analise os estados dos interruptores (Emer_ON, Stick) nestes momentos.</p>", unsafe_allow_html=True)
-        st.dataframe(aplicar_estilos(disparos_df), use_container_width=True, hide_index=True)
+        st.dataframe(aplicar_estilos_dtc(disparos_df), use_container_width=True, hide_index=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
     # Tabela Completa
     st.markdown("### 📋 Histórico Completo de Voo")
-    st.dataframe(aplicar_estilos(df), use_container_width=True, hide_index=True)
+    st.dataframe(aplicar_estilos_dtc(df), use_container_width=True, hide_index=True)
 
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
     _, col_btn, _ = st.columns([1, 2, 1])

@@ -17,6 +17,8 @@ from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.utils.helpers import safe_numeric
+
 # Carrega o schema de variáveis para formatação correta dos gráficos
 _SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "docs" / "schemas" / "variaveis_v1.json"
 try:
@@ -265,7 +267,7 @@ class TimelinePlotter:
                 hovertemplate=(
                     f"<b>⚠ FALHA: {short_name}</b><br>"
                     f"t=%{{x:.2f}} min<br>"
-                    f"{y_column}=%{{y}}<extra></extra>"
+                    f"{y_ref}=%{{y}}<extra></extra>"  # BUG-04: usa y_ref (str) em vez de y_column (pode ser list)
                 ),
             ))
 
@@ -586,31 +588,33 @@ GAUGE_SPECS: dict[str, dict] = {
 _MIN_LIMIT_VARS: frozenset[str] = frozenset({"OP"})
 
 
+# DUP-04: função de módulo para cor de motor (substitui duplicações)
+def get_engine_color(value: float, variable: str) -> str:
+    """Retorna a cor (normal / caution / warning) para o valor instantâneo de um parâmetro de motor."""
+    limits = ENGINE_LIMITS.get(variable)
+    if limits is None:
+        return COLORS["normal"]
+    caution = limits["caution"]
+    warning = limits["warning"]
+    if variable in _MIN_LIMIT_VARS:
+        if value <= warning:
+            return COLORS["warning"]
+        if value <= caution:
+            return COLORS["caution"]
+    else:
+        if value >= warning:
+            return COLORS["warning"]
+        if value >= caution:
+            return COLORS["caution"]
+    return COLORS["normal"]
+
+
 class EngineGaugePlotter:
     """Gera os gauges dos instrumentos do motor via go.Indicator."""
 
     def _get_color(self, value: float, variable: str) -> str:
         """Retorna a cor (normal / caution / warning) para o valor instantâneo."""
-        limits = ENGINE_LIMITS.get(variable)
-        if limits is None:
-            return COLORS["normal"]
-
-        caution = limits["caution"]
-        warning = limits["warning"]
-
-        if variable in _MIN_LIMIT_VARS:
-            # OP: abaixo do limite é ruim
-            if value <= warning:
-                return COLORS["warning"]
-            if value <= caution:
-                return COLORS["caution"]
-        else:
-            if value >= warning:
-                return COLORS["warning"]
-            if value >= caution:
-                return COLORS["caution"]
-
-        return COLORS["normal"]
+        return get_engine_color(value, variable)  # DUP-04: delega para função de módulo
 
     def plot_gauge(self, value: float, variable: str, label: str) -> go.Figure:
         """Cria um gauge Plotly para a variável de motor fornecida.
@@ -692,12 +696,5 @@ class EngineGaugePlotter:
         order = [("Q", "TORQUE"), ("ITT", "ITT"), ("NP", "Np"), ("NG", "Ng"),
                  ("FF", "F.FLOW"), ("OT", "OIL TEMP"), ("OP", "OIL PRESS")]
 
-        def _safe(key: str) -> float:
-            val = snapshot.get(key, 0)
-            try:
-                f = float(val)
-                return f if f == f else 0.0
-            except Exception:
-                return 0.0
-
-        return [self.plot_gauge(_safe(var), var, lbl) for var, lbl in order]
+        # DUP-01: usa safe_numeric centralizado
+        return [self.plot_gauge(safe_numeric(snapshot, var), var, lbl) for var, lbl in order]

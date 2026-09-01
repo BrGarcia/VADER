@@ -15,7 +15,7 @@
     "explicacao": "Vazamento no sistema de sangria de ar do motor"
   },
   {
-    "mensagem": "CAB ALT",
+    "mensagem": "CAB ALT HI",
     "categoria": "Warning",
     "explicacao": "Altitude elevada da cabine (maior do que 25000ft)"
   },
@@ -30,7 +30,7 @@
     "explicacao": "Capota aberta"
   },
   {
-    "mensagem": "CHIP DET",
+    "mensagem": "CHIP DET ABN",
     "categoria": "Warning",
     "explicacao": "Presença de limalhas na AGB (Caixa de Acessórios) e na RGB (Caixa de Redução), ou funcionamento anormal do motor com detecção de limalhas ou na AGB ou na RGB."
   },
@@ -120,12 +120,12 @@
     "explicacao": "Sobreaquecimento no sistema de sangria de ar do motor"
   },
   {
-    "mensagem": "CAB ALT",
+    "mensagem": "CAB ALT LO",
     "categoria": "Caution",
     "explicacao": "Descompressão da cabine (limite de 16000ft excedido)"
   },
   {
-    "mensagem": "CHIP DET",
+    "mensagem": "CHIP DET NML",
     "categoria": "Caution",
     "explicacao": "Presença de limalhas na RGB com funcionamento normal do motor; ou detecção de limalhas na AGB ou na RGB com funcionamento do motor e aeronave em solo"
   },

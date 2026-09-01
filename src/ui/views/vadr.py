@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import os
 import streamlit as st
 import pandas as pd
@@ -48,7 +49,8 @@ def render_bottom_panel(df: pd.DataFrame) -> None:
             n_rows = len(df)
             duration = df["TIME"].max() if "TIME" in df.columns else 0
             fname = st.session_state.get("current_filename", "arquivo")
-            st.markdown(f"<p style='font-size: 0.7rem; margin-bottom: 0px; text-align: center;'>📄 {fname[:24]}</p>", unsafe_allow_html=True)
+            fname_safe = html.escape(fname[:24])  # SEC-01: sanitiza contra XSS
+            st.markdown(f"<p style='font-size: 0.7rem; margin-bottom: 0px; text-align: center;'>📄 {fname_safe}</p>", unsafe_allow_html=True)
             st.markdown(f"<p style='font-size: 0.7rem; text-align: center;'>🔢 {n_rows:,} registros | ⏱ {duration / 60:.2f} min</p>", unsafe_allow_html=True)
 
         # ── Botão Nova Análise ──
@@ -129,10 +131,14 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
         annotation_font=dict(color="#FF4B4B", size=11),
     )
 
-    st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True}, key=f"main_plot_{y_col}")
-
-    # Slider de Tempo
-    controller.render_slider()
+    # ── Renderização Centralizada (Gráfico e Controle) ──
+    # Diminuímos a largura horizontal do gráfico e da barra para forçá-los ao mesmo tamanho exato
+    _, col_centro, _ = st.columns([0.05, 0.9, 0.05])
+    
+    with col_centro:
+        st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True}, key=f"main_plot_{y_col}")
+        # Slider de Tempo logo abaixo do gráfico
+        controller.render_slider()
 
     st.markdown("---")
 
@@ -140,6 +146,9 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     st.markdown("#### ✈️ Atitude e Dados Críticos")
     attitude_box.render(snapshot, fault_columns)
 
+    # Cards de Subsistemas e Rastreio Geográfico foram removidos deliberadamente
+    # em commits anteriores (simplificação da UI); flight_map.py e o antigo
+    # SubsystemCards ficam arquivados/inativos ate uma reativacao futura.
 
     # Painel inferior (configurações + nova análise)
     render_bottom_panel(df)

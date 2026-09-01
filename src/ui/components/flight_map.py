@@ -30,7 +30,7 @@ class FlightMap:
         try:
             lat = float(lat)
             lon = float(lon)
-        except:
+        except (ValueError, TypeError):  # BUG-01: except específico
             st.warning("Dados de GPS inválidos.")
             return
             
@@ -39,6 +39,8 @@ class FlightMap:
         
         # ── Validar e tratar falhas de GPS (Dropouts) ──
         # Se o GPS sumir (muito comum em manobras), usamos a última posição válida conhecida.
+        # BUG-02: extraímos apenas lat/lon/heading sem reatribuir snapshot inteiro
+        heading_source = snapshot  # referência para leitura de proa
         if pd.isna(lat) or pd.isna(lon) or (lat == 0 and lon == 0):
             valid_gps = df_path[(df_path["GPSLAT"].notna()) & (df_path["GPSLONG"].notna()) & (df_path["GPSLAT"] != 0) & (df_path["GPSLONG"] != 0)]
             if not valid_gps.empty:
@@ -46,8 +48,8 @@ class FlightMap:
                 lat = float(last_valid["GPSLAT"])
                 lon = float(last_valid["GPSLONG"])
                 
-                # Se precisamos usar a proa antiga também
-                snapshot = last_valid 
+                # Usa proa do último ponto GPS válido (não reatribui snapshot)
+                heading_source = last_valid
             else:
                 st.warning("Sem sinal GPS válido até este momento da gravação.")
                 return
@@ -55,12 +57,12 @@ class FlightMap:
         # ── Lógica de Proa (Heading) ──
         # MAG_HDGV == 3 indica que a proa magnética é válida
         heading = 0.0
-        if "MAG_HDG" in snapshot.index and "MAG_HDGV" in snapshot.index:
+        if "MAG_HDG" in heading_source.index and "MAG_HDGV" in heading_source.index:
             try:
-                hdg_v = float(snapshot.get("MAG_HDGV", 0))
+                hdg_v = float(heading_source.get("MAG_HDGV", 0))
                 if hdg_v == 3.0: 
-                    heading = float(snapshot.get("MAG_HDG", 0))
-            except:
+                    heading = float(heading_source.get("MAG_HDG", 0))
+            except (ValueError, TypeError):  # BUG-01: except específico
                 pass
                 
         # O Pydeck usa rotação horária em graus, o que bate com a bússola.
