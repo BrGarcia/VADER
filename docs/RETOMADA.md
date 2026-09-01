@@ -108,6 +108,31 @@ Triagem item a item do débito conhecido, comparando o que os documentos afirmam
 | Suspeita descartada: diff/shift cruzando fronteira de `Origem_Arquivo` na concatenação de múltiplos `.DMP` | Mesmo comportamento existe no script de referência original (baseado na macro VBA legada) — parece ser característica assumida do design, não bug |
 | `docs/dtc-mode/conversor.py` (script de referência standalone, fora do app) | **Arquivado** em `archive/dtc-mode/conversor.py` — ainda tem o mesmo BUG-07 não corrigido, registrado caso alguém ainda o use manualmente |
 
+## 9. Merge da auditoria técnica (01/09/2026) — `55faa64`
+
+Testado por dry-run que a auditoria completa (`fix/auditoria-tecnica`) é separável do trabalho de fluidez de gráfico (`development`/`feature/correcao-fluidez-grafico-temporal`) — confirmado, mergeada só a primeira. 9 arquivos em conflito, todos do tipo "os dois lados corrigiram o mesmo problema de forma diferente", resolvidos preservando a intenção de ambos os lados quando possível.
+
+**Correção a um achado anterior:** `relatorio_plan.md` não são dois documentos diferentes como eu tinha registrado na Fase C — é o **mesmo documento original** (mesma data, mesmo título) nas duas branches; a versão daqui só tinha as anotações de status que fui adicionando durante a retomada. Resolvido mantendo a versão anotada.
+
+**Itens do `relatorio_plan.md` fechados por este merge** (nenhum exigiu trabalho extra, vieram prontos da outra branch):
+- IMP-01 (logger centralizado, `src/utils/logger.py`)
+- DUP-01 (`safe_numeric` centralizado, `src/utils/helpers.py`)
+- DUP-04 (`get_engine_color` unificado em `plots.py` — a cor "normal" foi padronizada para `COLORS["normal"]` (branco); antes divergia do verde fixo usado no card de resumo do motor — mudança visual pequena, aceita como parte da consolidação)
+- IMP-02 (skeleton de testes, `tests/` — 11 testes passando)
+- Bônus fora do plano original: BUG-04 em `plots.py` (hover de falha usava `y_column`, que pode ser lista, em vez de `y_ref`), SEC-01 em `vadr.py` (sanitização XSS do nome de arquivo exibido), BUG-01/BUG-02 em `flight_map.py` (except genérico e reatribuição indevida de `snapshot`), `vsi.py` arquivado (nunca integrado)
+
+**Decisões de produto preservadas durante o merge** (a outra branch tinha essas UIs ativas, mas foram removidas deliberadamente aqui antes da divergência das branches):
+- `SubsystemCards` — não reintroduzido em `components/__init__.py`/`vadr.py`
+- Mapa de Rastreio Geográfico (`FlightMap.render`) — não reintroduzido em `vadr.py`; `flight_map.py` continua arquivado/inativo por decisão explícita, só recebeu os bug fixes de qualquer forma (não afeta nada em execução)
+
+**Conferido depois:** IMP-09 (validação de estrutura CSV, `data_loader.py:160`) e IMP-05 (imports movidos para o topo em `landing.py`/`completa.py`) também vieram prontos no merge. Com isso, **todo o `relatorio_plan.md` está fechado** — DUP-02/DUP-03 já tinham sido resolvidos nesta branch antes do merge, o resto veio de `fix/auditoria-tecnica`.
+
+`requirements.txt` ganhou faixas de versão (`<major seguinte>`) e `pytest`/`pydeck`/`numpy` explícitos; `openpyxl` removido (não usado em nenhum código ativo, só no `conversor.py` arquivado).
+
+Smoke test: `streamlit run app.py` sobe sem traceback (HTTP 200); `pytest tests/` — 11 passed. **Validação visual na UI não foi possível** — a extensão Claude-in-Chrome não conectou nesta sessão apesar de o usuário ter configurado a conexão.
+
+**Próximo passo da metodologia main+development:** promover esta branch (`feature/modo-vadr`, agora com a auditoria incorporada) a nova `development`; depois mesclar `feature/correcao-fluidez-grafico-temporal` nela; depois sincronizar `main`. Aguardando decisão do usuário para prosseguir.
+
 **Commit gerado:** `48ea9da` (fix isolado do BUG-07) + commit pendente com o restante (falhas visíveis na UI + arquivamento do TRIMM legado).
 
 ---

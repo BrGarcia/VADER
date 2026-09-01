@@ -4,13 +4,13 @@
 **Branch:** `fix/auditoria-tecnica`  
 **Referência:** `relatorio.md` — Seção 7
 
-> ℹ️ **Triagem em 01/09/2026 (ver `docs/RETOMADA.md`):** plano revisado após período sem atividade. Nenhum item de logging/dedup/testes havia sido executado. Status por item marcado abaixo; itens ✅ foram fechados durante a retomada, os demais seguem válidos e pendentes.
+> ✅ **Plano encerrado em 01/09/2026 (ver `docs/RETOMADA.md`):** todos os itens foram resolvidos — a maioria via merge de `fix/auditoria-tecnica` (que já os tinha implementado numa branch nunca antes mesclada), DUP-02/DUP-03 diretamente nesta branch antes do merge, e IMP-07 marcado obsoleto (recurso que o item propunha otimizar foi removido da UI).
 
 ---
 
 ## Fase 1 — Infraestrutura (pré-requisitos)
 
-### 1.1 — IMP-01: Framework de Logging — ⏳ pendente
+### 1.1 — IMP-01: Framework de Logging — ✅ resolvido (merge 01/09/2026)
 
 **Arquivo a criar:** `src/utils/logger.py`  
 **Impacto:** Todos os módulos que usam `print()` para erros  
@@ -20,7 +20,7 @@
 2. Substituir todos os `print(f"[VADER]...")` e `print(f"Erro...")` por chamadas ao logger
 3. Arquivos afetados: `components/__init__.py`, `dtc_parser.py`, `trimm_converter.py` (archive), `video_converter.py`
 
-### 1.2 — DUP-01: Função `_safe()` centralizada — ⏳ pendente
+### 1.2 — DUP-01: Função `_safe()` centralizada — ✅ resolvido (merge 01/09/2026)
 
 **Arquivo a criar:** `src/utils/helpers.py`  
 **Impacto:** `components/__init__.py` (3 ocorrências), `plots.py` (1 ocorrência)
@@ -34,7 +34,7 @@
 
 ## Fase 2 — Eliminação de Duplicações
 
-### 2.1 — DUP-02: Estilos DTC centralizados — ⏳ pendente
+### 2.1 — DUP-02: Estilos DTC centralizados — ✅ resolvido em 01/09/2026
 
 **Arquivo a criar:** `src/ui/components/dtc_styles.py`  
 **Impacto:** `views/dtc.py`, `views/completa.py`
@@ -44,7 +44,7 @@
 2. A função `aplicar_estilos(df)` recebe o DataFrame e retorna o Styler pronto
 3. Remover definições duplicadas de ambas as views
 
-### 2.2 — DUP-03: Painel de vídeo unificado — ⏳ pendente
+### 2.2 — DUP-03: Painel de vídeo unificado — ✅ resolvido (merge 01/09/2026)
 
 **Arquivo afetado:** `views/completa.py`  
 
@@ -53,7 +53,7 @@
 2. Substituir os blocos EICAS (linhas 24-65) e CHVC (linhas 67-108) por chamadas à função
 3. Diferenças parametrizadas: `title`, `rotate`, `key_prefix`
 
-### 2.3 — DUP-04: Cor de motor unificada — ⏳ pendente (divergência real confirmada)
+### 2.3 — DUP-04: Cor de motor unificada — ✅ resolvido (merge 01/09/2026)
 
 **Arquivo afetado:** `components/__init__.py`, `plots.py`  
 
@@ -62,7 +62,7 @@
 2. Extrair para função de módulo `get_engine_color(value, variable)` em `plots.py`
 3. Importar em `components/__init__.py` e remover `_get_engine_color()` local
 
-> **Achado (01/09/2026):** a lógica de limiar (`caution`/`warning`) é idêntica nas duas cópias, mas a cor "normal" diverge: `plots.py` retorna `COLORS["normal"]` (`#FFFFFF`), enquanto `components/__init__.py` retorna um hex fixo `#00FF88`. Pode ser intencional (gauge vs. card), mas não está documentado — confirmar antes de unificar cegamente.
+> **Resolvido via merge:** `get_engine_color()` unificado em `plots.py`, importado por `components/__init__.py`. A divergência de cor "normal" (branco vs. verde fixo) foi resolvida a favor de `COLORS["normal"]` (branco) — mudança visual pequena no card de resumo do motor, aceita como parte da consolidação.
 
 ---
 
@@ -93,17 +93,17 @@
 
 ## Fase 4 — Melhorias de Arquitetura (IMP-03..09)
 
-### 4.1 — IMP-09: Validação de estrutura CSV — ⏳ pendente
+### 4.1 — IMP-09: Validação de estrutura CSV — ✅ resolvido (merge 01/09/2026)
 
 **Arquivo:** `data_loader.py`  
 **Plano:** Adicionar checagem de colunas TIME/STIME após leitura
 
-### 4.2 — IMP-05: Imports no topo dos módulos — ⏳ pendente
+### 4.2 — IMP-05: Imports no topo dos módulos — ✅ resolvido (merge 01/09/2026)
 
 **Arquivos:** `landing.py`, `completa.py`  
 **Plano:** Mover imports de `DtcParser`, `video_converter`, `local_scanner` para o topo
 
-### 4.3 — IMP-02: Estrutura de testes (skeleton) — ⏳ pendente
+### 4.3 — IMP-02: Estrutura de testes (skeleton) — ✅ resolvido (merge 01/09/2026)
 
 **Diretório a criar:** `tests/`  
 **Plano:** Criar skeleton com `conftest.py` e um teste básico para `data_loader` e `dtc_parser`
