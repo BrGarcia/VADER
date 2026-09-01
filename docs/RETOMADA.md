@@ -183,6 +183,36 @@ Com `development`, `fix/auditoria-tecnica`, `feature/correcao-fluidez-grafico-te
 
 ---
 
+## 13. Fechamento dos requisitos do Modo VADR (01/09/2026)
+
+Auditoria do Modo VADR contra a spec formal (`docs/02_requirements.md`) encontrou **três requisitos não atendidos** — todos por decisões deliberadas de simplificação tomadas ao longo das iterações, não por bugs:
+
+| RF | Situação encontrada | Ação |
+|----|---------------------|------|
+| **RF02** — horizonte artificial reagindo a pitch/roll | Só numérico; `AttitudeIndicator` existia completo mas desconectado da UI (S-03 "suspensa") | **Implementado** — toggle `🌐 Horizonte Artificial` alterna com o painel de alertas. O `FaultPanel` (RF06) segue como padrão, então nenhum dos dois requisitos foi sacrificado. |
+| **RF04** — Cards de Subsistemas | Ausente; classe removida em commit de simplificação e não reintroduzida nos merges de hoje (decisão consciente na época) | **Implementado** — `SubsystemCards` restaurado do commit `bfad9fa` (versão já refatorada com `safe_numeric`) e religado em `views/vadr.py`. |
+| **RF05.1** — Play/Pause automático | Ausente; código dizia literalmente "Removida a pedido" | **Implementado** — botão ▶/⏸ ao lado do slider, ~60 s por voo a 10 FPS independentemente do tamanho do arquivo. |
+
+**Detalhes de implementação do playback (RF05.1):**
+- Avanço acontece **antes** de instanciar o slider — o Streamlit proíbe alterar o estado de um widget depois que ele foi criado no mesmo run.
+- O slider passou a ser controlado exclusivamente via `session_state` (sem `value=`), para que o playback consiga movê-lo sem conflito de estado.
+- O agendamento do próximo quadro usa **`st.fragment(run_every=...)`** — o mecanismo que o Streamlit oferece para animação. O fragmento é construído a cada execução de `render_main`, para que o intervalo possa ligar/desligar conforme o playback.
+- `TimeController.STATE_KEYS` centraliza as chaves de estado temporal, agora limpas ao trocar de voo (antes, um voo mais curto que o anterior deixaria o slider fora da faixa).
+
+**Correção após validação visual do usuário (01/09/2026):**
+
+A primeira versão usava `time.sleep()` + `st.rerun(scope="fragment")` com fallback para `st.rerun()` completo. O usuário reportou **cintilação e falta de fluidez** — e o diagnóstico confirmou a causa:
+
+- `scope="fragment"` só é válido *durante* um rerun de fragmento. O fallback disparava um rerun de **página inteira**, e a partir daí todo quadro seguinte também caía no fallback → **cascata de reruns de página inteira**, redesenhando tudo 10x por segundo.
+- O sintoma ficou visível no teste de integração: um único clique no Play levava o índice de 0 até o último quadro dentro do mesmo `run()` — assinatura da cascata. Depois da correção, um clique avança exatamente um passo, como esperado.
+- Correções aplicadas: `run_every` no lugar do par `sleep`+`rerun`; FPS de 10 → **5** (cada quadro reenvia a figura Plotly ao navegador, então taxa alta vira cintilação em vez de fluidez); e um `st.rerun()` único ao fim da reprodução, só para desarmar o temporizador.
+
+**Desalinhamento do slider (regressão que eu mesmo introduzi):** o botão Play tinha sido colocado na mesma linha do slider (`st.columns([1, 14])`), o que encolhia a barra e desalinhava o cursor vermelho do gráfico. O botão foi movido para uma linha própria acima, devolvendo largura total ao slider. Confirmado que `TIME` é uniformemente amostrado (0,125 s/amostra), então índice e tempo são proporcionais — não havia outra fonte de desalinhamento.
+
+**Validação:** `tests/test_time_controller.py` com 9 testes unitários (passo do playback, parada no fim, reinício no fim, pausa ao mover o slider, correção de índice fora da faixa) — suíte total foi de 11 para 20 testes. Integração validada com `streamlit.testing.v1.AppTest` nos modos VADR e Completa, já que a extensão Claude-in-Chrome não conectou nesta sessão.
+
+---
+
 ## 7. Princípio Norteador
 
 Depois de um período parado, **não conte com a memória do estado anterior** — trate o repositório como se fosse herdado de outra pessoa. Verifique antes de assumir: se um arquivo de plano ou roadmap menciona algo como "feito", confirme no código atual antes de construir em cima dele.

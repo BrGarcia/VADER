@@ -16,6 +16,7 @@ Versão: 2.2 | Atualizado: 11 de Abril de 2026
 | **5** | Redesign Visual e Dashboards Avançados | Média | 🚧 Em Progresso |
 | **6** | Alertas Sonoros e Exportação | Baixa | 📋 Planejada |
 | **7** | Modo Comparativo e Analytics Avançado | Baixa | 📋 Planejada |
+| **8** | Modos de Renderização (Desempenho / Compatibilidade) | Alta | 📋 Planejada — ver `docs/backlog/modos_renderizacao.md` |
 
 ---
 
@@ -99,7 +100,7 @@ Esta seção documenta problemas identificados durante a inspeção do código a
 |---|------|---------------|
 | S-01 | `app.py` | Menu unificado em `main()` — `render_top_menu` removido de `render_main`. |
 | S-02 | `ui_components/__init__.py` | `alertas.json` carregado uma única vez como `_ALERT_DEFS` no nível de módulo. |
-| S-03 | `ui_components/__init__.py` | ~~Toggle `🌐 Horizonte Artificial` alterna entre `FaultPanel` e `AttitudeIndicator`.~~ | ⏸ **Suspensa em 11/04/2026** — toggle removido da UI; `AttitudeIndicator` preservado em `self._attitude` para bloco futuro de Atitude + Geolocalização. |
+| S-03 | `ui_components/__init__.py` | ~~Toggle `🌐 Horizonte Artificial` alterna entre `FaultPanel` e `AttitudeIndicator`.~~ | ✅ **Reativada em 01/09/2026** — toggle `🌐 Horizonte Artificial` de volta no painel central (RF02); o painel de alertas EICAS (RF06) segue como padrão. |
 | S-04 | `data_loader.py` | Detecção de cabeçalho aceita `TIME` ou `STIME`. Extrai `VADR_HOURS/MIN/SEC/DAY/MONTH/YEAR` e `GMT_HOUR/MIN/SEC` para exibir hora de início, hora GPS real e desvio `Δ Clock` no cabeçalho. |
 | S-05 | `data_loader.py` + `plots.py` | Coluna `PHASE` (ground/flight) pré-computada em `_coerce_types()` e salva no Parquet. `add_phase_bands()` lê diretamente. |
 | S-06 | `fault_panel.py` | Células de alerta com `overflow:hidden; text-overflow:ellipsis` e tooltip `title` com nome completo. |
@@ -109,6 +110,18 @@ Esta seção documenta problemas identificados durante a inspeção do código a
 | # | Área | Descrição |
 |---|------|-----------|
 | S-07 → I-15 | `AttitudeBox` | Integração do `vsi.py` (`VerticalSpeedIndicator`) para exibir velocidade vertical (ALTR). |
+
+### ✅ Reimplementadas em 01/09/2026 — Fechamento dos requisitos do Modo VADR
+
+Auditoria contra `docs/02_requirements.md` (ver `docs/RETOMADA.md` §13) apontou três requisitos formais que tinham sido descontinuados ao longo das iterações. Todos foram reimplementados:
+
+| RF | Requisito | Implementação |
+|----|-----------|---------------|
+| **RF02** | Horizonte artificial reagindo a pitch/roll | Toggle `🌐 Horizonte Artificial` no painel central alterna com o `FaultPanel` (S-03 reativada). `AttitudeIndicator` já existia pronto, só estava desconectado da UI. |
+| **RF04** | Cards de Subsistemas (Box Inferior) | `SubsystemCards` restaurado do histórico (versão já com `safe_numeric` da auditoria) e reconectado em `views/vadr.py`: Trem de Pouso, Carga Estrutural (NZ), Resumo do Motor e Manete (PCL). |
+| **RF05.1** | Play/Pause de reprodução automática | Botão ▶/⏸ em linha própria acima do slider. Avanço calculado para percorrer o voo inteiro em ~60 s a 5 FPS, independente do tamanho do arquivo; para sozinho no último quadro, reinicia se acionado no fim, e mover o slider pausa. O próximo quadro é agendado por `st.fragment(run_every=...)`, que reexecuta apenas o painel de análise. |
+
+Cobertura: `tests/test_time_controller.py` (9 testes) para a lógica de playback, mais validação de integração via `streamlit.testing.v1.AppTest` nos modos VADR e Completa.
 
 ### 📅 Futuras (não priorizadas)
 
@@ -129,6 +142,23 @@ Esta seção documenta problemas identificados durante a inspeção do código a
 
 - **S-14:** Suporte a dois DataFrames simultâneos (`df_a`, `df_b`), com o gráfico temporal sobrepondo as duas séries em cores distintas.
 - **S-15:** Delta automático entre os dois voos: variáveis com maior divergência são sinalizadas para investigação.
+
+### Fase 8 — Modos de Renderização (Planejada, prioridade alta)
+
+📄 **Plano detalhado:** `docs/backlog/modos_renderizacao.md`
+
+Introduz a escolha **⚡ Desempenho (WebGL)** / **🛡️ Compatibilidade** na landing page, atacando dois problemas levantados em 01/09/2026:
+
+- **Precisão:** a decimação atual usa *stride* uniforme, que **descarta picos estreitos** — exatamente os transientes que importam numa análise de voo. Será substituída por **envelope min/máx por bucket** (a mesma técnica de osciloscópio), compartilhada pelos dois modos.
+- **Fluidez:** 60 FPS é inalcançável no modelo server-side (piso de dezenas de ms por quadro). O modo Desempenho migra o viewport para o navegador, onde o gráfico é desenhado uma única vez e só o cursor se move.
+
+| Etapa | Branch | Entrega | Risco |
+|-------|--------|---------|-------|
+| 1 | `feature/render-modes-etapa1` | Seletor + `Scattergl` + envelope min/máx (sem JavaScript) | Baixo |
+| 2 | `feature/viewport-clientside` | Playback 60 FPS, zoom com re-decimação, seguir-cursor | Médio |
+| 3 | `feature/instrumentos-svg` | Instrumentos em SVG, tudo sincronizado a 60 FPS | Alto |
+
+> **Decisão de produto registrada:** os modos **não serão equivalentes**. Seguir-cursor e zoom sincronizado existirão só no modo Desempenho — Compatibilidade é fallback degradado, não espelho.
 
 ---
 

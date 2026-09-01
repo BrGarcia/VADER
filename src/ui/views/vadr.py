@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 from src.data.data_loader import DataLoader
 from src.ui.plots import TimelinePlotter
-from src.ui.components import AttitudeBox, TimeController
+from src.ui.components import AttitudeBox, TimeController, SubsystemCards
 from src.ui.views.landing import _get_recent_files, _LOADER
 
 _PLOTTER = TimelinePlotter()
@@ -74,6 +74,10 @@ def render_bottom_panel(df: pd.DataFrame) -> None:
                         if new_df is not None:
                             st.session_state.current_df = new_df
                             st.session_state.current_filename = sel
+                            # Reinicia a linha do tempo: o novo voo pode ser mais
+                            # curto que o anterior (índice ficaria fora da faixa)
+                            for key in TimeController.STATE_KEYS:
+                                st.session_state.pop(key, None)
                             st.rerun()
 
         # ── Info do arquivo atual ──
@@ -92,16 +96,38 @@ def render_bottom_panel(df: pd.DataFrame) -> None:
             if st.button("🔄  NOVA ANÁLISE", key="btn_nova_analise", use_container_width=True):
                 # Limpa o estado e retorna à landing page
                 for key in ["current_df", "current_filename", "last_y_col",
-                             TimeController.SESSION_KEY]:
+                            *TimeController.STATE_KEYS]:
                     st.session_state.pop(key, None)
                 st.rerun()
 
-@st.fragment
 def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
+    """Renderiza o painel de análise, ligando o temporizador durante o playback.
+
+    RF05.1 — Quando a reprodução automática está ativa, o painel é embrulhado em
+    um fragmento com `run_every`: o próprio Streamlit reexecuta apenas esta
+    área no intervalo do playback. Isso substitui o par
+    `time.sleep()` + `st.rerun()`, que reexecutava a página inteira a cada
+    quadro e provocava cintilação.
+    """
+    timer_ativo = TimeController.is_playing()
+    run_every = TimeController.playback_interval() if timer_ativo else None
+
+    # O fragmento é construído a cada execução para que `run_every` possa
+    # mudar conforme o playback liga/desliga.
+    painel = st.fragment(run_every=run_every)(_render_analysis_panel)
+    return painel(df, show_metadata, timer_ativo)
+
+
+def _render_analysis_panel(
+    df: pd.DataFrame,
+    show_metadata: bool = True,
+    timer_ativo: bool = False,
+) -> str | None:
     """Monta o layout sincronizado de análise. Retorna y_col selecionado."""
 
     controller    = TimeController(df)
     attitude_box  = AttitudeBox()
+    subsys_cards  = SubsystemCards()
     fault_columns = _LOADER.get_fault_columns(df)
 
     # Cabeçalho de Dados da Aeronave
@@ -238,11 +264,21 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     st.markdown("#### ✈️ Atitude e Dados Críticos")
     attitude_box.render(snapshot, fault_columns)
 
-    # Cards de Subsistemas e Rastreio Geográfico foram removidos deliberadamente
-    # em commits anteriores (simplificação da UI); flight_map.py e o antigo
-    # SubsystemCards ficam arquivados/inativos ate uma reativacao futura.
+    # RF04 — Cards de Subsistemas (Trem de Pouso, Carga Estrutural, Motor, Manete)
+    st.markdown("#### 🔧 Subsistemas")
+    subsys_cards.render_all(snapshot)
+
+    # NOTA: o Rastreio Geográfico (flight_map.py) segue arquivado/inativo por
+    # decisão explícita, aguardando o projeto ficar mais robusto.
 
     # Painel inferior (configurações + nova análise)
     render_bottom_panel(df)
+
+    # RF05.1 — Desliga o temporizador quando a reprodução termina.
+    # `run_every` é decidido em render_main, que não roda durante os reruns
+    # automáticos do fragmento; então, ao pausar ou chegar ao fim do voo, é
+    # preciso um rerun completo (único) para o fragmento ser recriado sem timer.
+    if timer_ativo and not TimeController.is_playing():
+        st.rerun()
 
     return y_col
