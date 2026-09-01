@@ -1,6 +1,6 @@
 # Papel e Funcionamento do Conversor de Arquivos DMP (TRIMM)
 
-> **Arquivo de Referência:** [`docs/dtc-mode/conversor.py`](file:///Users/bruno/Documents/Gemini/10_PROJETOS/VADER/docs/dtc-mode/conversor.py)  
+> **Arquivo de Referência:** [`archive/dtc-mode/conversor.py`](file:///Users/bruno/Documents/Gemini/10_PROJETOS/VADER/archive/dtc-mode/conversor.py)  
 > **Módulos Integrados no V.A.D.E.R.:** [`src/data/dtc_parser.py`](file:///Users/bruno/Documents/Gemini/10_PROJETOS/VADER/src/data/dtc_parser.py) e [`src/ui/views/dtc.py`](file:///Users/bruno/Documents/Gemini/10_PROJETOS/VADER/src/ui/views/dtc.py)
 
 ---
@@ -105,7 +105,7 @@ Ao término da análise da pasta:
 
 ## 6. Papel no Ecossistema V.A.D.E.R.
 
-O script `docs/dtc-mode/conversor.py` funcionou como a **especificação algorítmica e protótipo funcional** do módulo DTC. 
+O script `archive/dtc-mode/conversor.py` funcionou como a **especificação algorítmica e protótipo funcional** do módulo DTC. 
 
 No aplicativo interativo web V.A.D.E.R., essa lógica foi modularizada em:
 - [`src/data/dtc_parser.py`](file:///Users/bruno/Documents/Gemini/10_PROJETOS/VADER/src/data/dtc_parser.py): Responsável pela ingestão de arquivos em lote e em memória (`DtcParser.ingest_files` e `DtcParser.processar_diretorio`).

@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 
+from src.ui.components.dtc_styles import aplicar_estilos
+
 def render_dtc(df: pd.DataFrame) -> None:
     """Monta a visualização para os dados consolidados do DTC."""
     st.markdown("<h2 style='text-align: center; color: #FF9800;'>🛠️ Análise DTC (Pitch Trim Switch)</h2>", unsafe_allow_html=True)
@@ -56,30 +58,6 @@ def render_dtc(df: pd.DataFrame) -> None:
                 st.markdown("<p style='text-align: center; color: #FF4B4B; font-size: 0.8rem; font-weight: bold;'>⚠️ Requer investigação imediata.</p>", unsafe_allow_html=True)
 
     st.markdown("---")
-    
-    # Configuração de Estilos para as Tabelas
-    def highlight_status_t(val):
-        if str(val).strip().upper() == "T":
-            return 'background-color: rgba(255, 152, 0, 0.4); color: white; font-weight: bold;'
-        return ''
-
-    def highlight_test_1(val):
-        if str(val).strip() == "1":
-            return 'background-color: rgba(255, 75, 75, 0.5); color: white; font-weight: bold;'
-        return ''
-
-    cols_t = [c for c in ["Emer_ON", "Emer_SW", "Stick_FWD", "Stick_AFT"] if c in df.columns]
-    cols_1 = [c for c in ["Aileron_Test", "Elevator_Test"] if c in df.columns]
-
-    def aplicar_estilos(data_frame):
-        styler = data_frame.style
-        if hasattr(styler, "map"):
-            styler = styler.map(highlight_status_t, subset=cols_t)
-            styler = styler.map(highlight_test_1, subset=cols_1)
-        else:
-            styler = styler.applymap(highlight_status_t, subset=cols_t)
-            styler = styler.applymap(highlight_test_1, subset=cols_1)
-        return styler
 
     # Extrato Rápido (Apenas Disparos)
     disparos_df = df[(df.get("Aileron_Test") == 1) | (df.get("Elevator_Test") == 1)]

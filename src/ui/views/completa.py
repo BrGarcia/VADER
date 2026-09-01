@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from src.ui.views.vadr import render_main
+from src.ui.components.dtc_styles import aplicar_estilos
 
 def render_completa() -> None:
     """Monta o esqueleto do Dashboard Integrado All-In-One."""
@@ -135,31 +136,8 @@ def render_completa() -> None:
             c_e.success("**Elevator:** Nenhum disparo")
             
         st.markdown("<br>", unsafe_allow_html=True)
-        
+
         # --- Tabelas do DTC ---
-        def highlight_status_t(val):
-            if str(val).strip().upper() == "T":
-                return 'background-color: rgba(255, 152, 0, 0.4); color: white; font-weight: bold;'
-            return ''
-
-        def highlight_test_1(val):
-            if str(val).strip() == "1":
-                return 'background-color: rgba(255, 75, 75, 0.5); color: white; font-weight: bold;'
-            return ''
-
-        cols_t = [c for c in ["Emer_ON", "Emer_SW", "Stick_FWD", "Stick_AFT"] if c in df_dtc.columns]
-        cols_1 = [c for c in ["Aileron_Test", "Elevator_Test"] if c in df_dtc.columns]
-
-        def aplicar_estilos(data_frame):
-            styler = data_frame.style
-            if hasattr(styler, "map"):
-                styler = styler.map(highlight_status_t, subset=cols_t)
-                styler = styler.map(highlight_test_1, subset=cols_1)
-            else:
-                styler = styler.applymap(highlight_status_t, subset=cols_t)
-                styler = styler.applymap(highlight_test_1, subset=cols_1)
-            return styler
-
         disparos_df = df_dtc[(df_dtc.get("Aileron_Test") == 1) | (df_dtc.get("Elevator_Test") == 1)]
         if not disparos_df.empty:
             with st.expander("🚨 Ocorrências de Disparo (Extrato Rápido)", expanded=True):
