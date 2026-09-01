@@ -28,7 +28,7 @@ class DataLoader:
         "BALT", "PALT", "RAD_ALT", "MACH", "AOA", "APA", "ARA", "NZ", "MAG_HDG",
         "WOW", "LDG", "FLAP", "AIRBRK",
         "PCL", "Q", "ITT", "NG", "NP", "FF", "OT", "OP",
-        "ENGFIRE", "MWC_DATA", "VALIDARINC",
+        "ENGFIRE", "MWC_DATA", "VALIDARINC", "FR",
     ]
 
     # Colunas críticas: sensores atualizam em sub-taxas, gerando células vazias.
@@ -36,7 +36,7 @@ class DataLoader:
     CORE_COLUMNS: list[str] = [
         "BALT", "PALT", "MACH", "AS",
         "AOA", "APA", "ARA", "NZ", "WOW", "LDG",
-        "Q", "ITT", "NG", "NP", "FF", "OT", "OP",
+        "Q", "ITT", "NG", "NP", "FF", "FR", "OT", "OP",
         "PCL", "MWC_DATA",
     ]
 
@@ -341,18 +341,31 @@ class DataLoader:
     # ------------------------------------------------------------------
 
     def get_numeric_columns(self, df: pd.DataFrame) -> list[str]:
-        """Retorna colunas numéricas de dados, excluindo flags de validade e TIME."""
-        numeric = df.select_dtypes(include="number").columns.tolist()
-        col_set = set(df.columns)
+        """Retorna colunas numéricas disponíveis para plotagem.
+
+        Comportamento estrito por modo (lido de ``df.attrs["analysis_mode"]``):
+
+        - ``"basic"``    — retorna **exatamente** as variáveis de
+          ``BASIC_ANALYSIS_COLUMNS`` que estejam presentes no DataFrame e
+          sejam numéricas. Nenhuma coluna derivada ou extra é exposta.
+        - ``"complete"`` — retorna **todas** as colunas numéricas do DataFrame
+          sem qualquer filtragem adicional (apenas ``TIME``, ``Rec #`` e
+          ``Rec`` são excluídos pois são eixo/índice, não parâmetros).
+        """
+        numeric_set = set(df.select_dtypes(include="number").columns)
+        # Colunas de navegação/índice — nunca são parâmetros de análise
         excluded = {"TIME", "Rec #", "Rec"}
 
-        # Colunas de validade seguem o padrão XYZV onde XYZ é o nome do dado.
-        validity_cols = {
-            c for c in numeric
-            if c.endswith("V") and len(c) > 1 and c[:-1] in col_set
-        }
+        analysis_mode = df.attrs.get("analysis_mode", "basic")
 
-        result = [c for c in numeric if c not in excluded and c not in validity_cols]
+        if analysis_mode == "complete":
+            # Modo completo: tudo sem omissões
+            result = [c for c in numeric_set if c not in excluded]
+        else:
+            # Modo básico: apenas as variáveis essenciais definidas em BASIC_ANALYSIS_COLUMNS
+            essential = set(self.BASIC_ANALYSIS_COLUMNS) - excluded
+            result = [c for c in essential if c in numeric_set]
+
         return sorted(result)
 
     def get_row_at_time(self, df: pd.DataFrame, time_index: int) -> pd.Series:

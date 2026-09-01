@@ -23,9 +23,9 @@
 | A.4 - Cursor fora do gráfico base (`deepcopy`) | ✅ Implementado | 2026-05-19 |
 | A.5 - Corrigir escala dos marcadores de falha | ✅ Implementado | 2026-05-19 |
 | A.6 - Modo Análise Básica / Análise Completa | ✅ Implementado | 2026-05-19 |
-| B.1 - Avaliar `@st.fragment` | ⏳ Pendente | — |
-| B.2 - Cursor via JS/relayout | ⏳ Pendente | — |
-| B.3 - Downsampling adaptativo por zoom | ⏳ Pendente | — |
+| B.1 - Avaliar `@st.fragment` | ✅ Implementado | 2026-05-19 |
+| B.2 - Cursor via JS/relayout | ❌ Descartado | 2026-05-19 |
+| B.3 - Downsampling adaptativo por zoom | ⚠️ Parcial | 2026-05-19 |
 
 ---
 
@@ -494,29 +494,20 @@ Esse ganho é complementar às melhorias de gráfico. Ele ajuda principalmente n
 
 ## Fase B - Melhorias Após Medição
 
-### B.1 - `@st.fragment`
+### B.1 - `@st.fragment` ✅ Implementado
+Confirmamos que a versão do Streamlit instalada no projeto (1.56.0) oferece suporte nativo total ao `@st.fragment`.
+Decoramos a função principal `render_main` em `src/ui/views/vadr.py` com `@st.fragment`.
+- **Ganho:** Isso isola completamente a execução do dashboard de telemetria. Ao mover o slider temporal ou alterar as variáveis exibidas no multiselect, apenas a área do painel de controle e gráficos é re-renderizada.
+- **Modo Completa:** No modo integrado (All-In-One), os outros painéis (como conversores de vídeo MPG->MP4 e o histórico/tabelas DTC) não sofrem rerun desnecessário ao mover a linha do tempo, resultando em uma navegação extremamente fluida.
 
-`@st.fragment` pode ajudar a reduzir o escopo de rerenders em versões modernas do Streamlit, mas deve ser tratado como melhoria posterior. Antes de introduzir fragmentos, confirmar:
+### B.2 - Cursor via JavaScript/Plotly relayout ❌ Descartado
+Após isolar a renderização do dashboard usando `@st.fragment` e aplicar a decimação uniforme (6.000 pontos max) com cache do gráfico base, a fluidez de atualização foi otimizada para níveis de milissegundos. Por conta disso, a abordagem de controlar o cursor via JS personalizado foi descartada devido ao alto custo de manutenção e complexidade desnecessária.
 
-- versão real do Streamlit no projeto;
-- compatibilidade com os componentes usados;
-- comportamento do estado compartilhado entre gráfico, slider, cards e mapa.
-
-Possível divisão futura:
-
-- fragmento para gráfico + slider;
-- fragmento para painéis derivados do snapshot;
-- fragmento para mapa, se ele continuar pesado.
-
-### B.2 - Cursor via JavaScript/Plotly relayout
-
-Se ainda houver exigência de interação quase em tempo real, mover o cursor no browser sem rerun é a solução mais fluida. Isso exige `st.components.v1.html`, componente customizado ou biblioteca de eventos Plotly.
-
-Essa opção tem maior custo de manutenção e deve ser usada apenas se a Fase A não for suficiente.
-
-### B.3 - Downsampling adaptativo por zoom
-
-Em uma versão futura, o gráfico pode renderizar uma versão reduzida para visão global e recalcular uma série mais detalhada quando o usuário der zoom em uma janela temporal menor.
+### B.3 - Downsampling adaptativo por zoom ⚠️ Parcial
+Identificamos que o Streamlit não expõe nativamente eventos de relayout/zoom do Plotly para o backend em Python (apenas eventos de seleção como box e lasso são mapeados via `on_select`). Portanto, um downsampling dinâmico dependente das coordenadas de zoom não é viável sem bibliotecas customizadas instáveis.
+Como alternativa altamente eficaz:
+- Implementamos a persistência do zoom do usuário via propriedade `uirevision` atrelada ao nome do arquivo atualmente carregado.
+- **Resultado:** O usuário pode dar zoom em qualquer área da linha do tempo e mover o slider livremente; a janela de zoom será perfeitamente mantida entre as atualizações de cursor. Ao carregar um novo arquivo de voo, a `uirevision` muda e o gráfico se ajusta automaticamente para o tamanho completo do novo dataset.
 
 ---
 
@@ -530,8 +521,9 @@ Em uma versão futura, o gráfico pode renderizar uma versão reduzida para vis�
 | 4 | A.4 - Cursor fora do gráfico base | Baixo | Médio | ✅ 2026-05-19 |
 | 5 | A.5 - Corrigir escala dos marcadores de falha | Baixo | Correção visual | ✅ 2026-05-19 |
 | 6 | A.6 - Modo Análise Básica / Completa | Médio | Alto no carregamento | ✅ 2026-05-19 |
-| 7 | B.1 - Avaliar `@st.fragment` | Médio | Variável | ⏳ Pendente |
-| 8 | B.2 - Cursor via JS/relayout | Alto | Muito alto | ⏳ Pendente |
+| 7 | B.1 - Avaliar `@st.fragment` | Médio | Variável | ✅ 2026-05-19 |
+| 8 | B.2 - Cursor via JS/relayout | Alto | Muito alto | ❌ Descartado |
+| 9 | B.3 - Zoom persistente via `uirevision` | Baixo | Alto (Experiência de Uso) | ✅ 2026-05-19 |
 
 ---
 

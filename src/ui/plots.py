@@ -131,6 +131,7 @@ class TimelinePlotter:
         df: pd.DataFrame,
         y_columns: str | list[str],
         time_column: str = "TIME",
+        exceedance_config: dict | None = None,
     ) -> go.Figure:
         """Plota séries temporais interativas com suporte a múltiplas variáveis.
 
@@ -142,19 +143,24 @@ class TimelinePlotter:
             df: DataFrame com os dados telemetrados.
             y_columns: Nome de uma coluna ou lista de nomes de colunas.
             time_column: Coluna de tempo (padrão: ``TIME``).
+            exceedance_config: Configuração opcional para destacar excedências.
         """
         if isinstance(y_columns, str):
             y_columns = [y_columns]
 
         fig = go.Figure()
 
-        t_min = float(df[time_column].min()) / 60
-        t_max = float(df[time_column].max()) / 60
+        t_min = float(df[time_column].min()) / 60.0
+        t_max = float(df[time_column].max()) / 60.0
 
         n = len(y_columns)
 
         # A.2 — decima o DataFrame uma única vez para todos os traces
         plot_df = _downsample_frame(df)
+
+        exc_var = exceedance_config.get("var") if exceedance_config else None
+        exc_op = exceedance_config.get("op") if exceedance_config else None
+        exc_val = exceedance_config.get("val") if exceedance_config else None
 
         for i, col in enumerate(y_columns):
             if col not in df.columns:
@@ -185,7 +191,7 @@ class TimelinePlotter:
                 hover_suffix = " (constante)"
 
             fig.add_trace(go.Scatter(
-                x=plot_df[time_column] / 60,
+                x=plot_df[time_column] / 60.0,
                 y=normalized,
                 customdata=plot_series.to_numpy(),
                 mode="lines",
@@ -194,6 +200,47 @@ class TimelinePlotter:
                 connectgaps=True,
                 hovertemplate=get_hovertemplate(col),
             ))
+
+            # Adiciona o trace de destaque de excedência se a condição for satisfeita
+            if exc_var == col and exc_op and exc_val is not None:
+                try:
+                    numeric_series = plot_series.astype(float)
+                    val_float = float(exc_val)
+                    if exc_op == ">":
+                        mask = numeric_series > val_float
+                    elif exc_op == "<":
+                        mask = numeric_series < val_float
+                    elif exc_op == ">=":
+                        mask = numeric_series >= val_float
+                    elif exc_op == "<=":
+                        mask = numeric_series <= val_float
+                    elif exc_op == "==":
+                        mask = numeric_series == val_float
+                    else:
+                        mask = None
+
+                    if mask is not None and mask.any():
+                        highlight_series = plot_series.copy()
+                        highlight_series = highlight_series.where(mask)
+
+                        if not is_constant:
+                            normalized_highlight = 5.0 + (highlight_series - v_min) / (v_max - v_min) * 90.0
+                        else:
+                            normalized_highlight = highlight_series * 0.0 + 8.0
+
+                        fig.add_trace(go.Scatter(
+                            x=plot_df[time_column] / 60.0,
+                            y=normalized_highlight,
+                            customdata=highlight_series.to_numpy(),
+                            mode="lines+markers",
+                            name=f"{col} (Excedência: {exc_op}{exc_val})",
+                            line=dict(color="#FF4B4B", width=3),
+                            marker=dict(color="#FF4B4B", size=5),
+                            connectgaps=False,
+                            hovertemplate=get_hovertemplate(col),
+                        ))
+                except Exception:
+                    pass
 
         # ── Layout: eixo Y único, sem labels (leitura via hover) ──
         layout = dict(
@@ -207,6 +254,7 @@ class TimelinePlotter:
                 gridcolor=COLORS["grid"],
                 color="#FAFAFA",
                 zeroline=False,
+                ticksuffix=" min",
                 range=[t_min, t_max],
                 minallowed=t_min,
                 maxallowed=t_max,
@@ -221,7 +269,7 @@ class TimelinePlotter:
                 fixedrange=True,          # bloqueia zoom vertical (cada série tem sua escala)
             ),
             margin=dict(l=20, r=20, t=30, b=50),
-            height=510,
+            height=660,
             dragmode="zoom",
             legend=dict(
                 bgcolor="rgba(0,0,0,0.4)",
@@ -280,7 +328,7 @@ class TimelinePlotter:
                 continue
 
             fault_rows = df.loc[fault_mask]
-            x_vals = fault_rows["TIME"] / 60
+            x_vals = fault_rows["TIME"] / 60.0
 
             # A.5 — normaliza y dos marcadores para a mesma escala 5–95 das séries
             if ref_series is not None and y_ref in fault_rows.columns:
@@ -361,7 +409,7 @@ class TimelinePlotter:
             ),
         }
 
-        t_max = float(time_series.max())
+        t_max = float(time_series.max()) / 60.0
         run_id = phases.ne(phases.shift()).cumsum()
         first_annotated: set[str] = set()
 
@@ -371,11 +419,11 @@ class TimelinePlotter:
             phase = group_phases.iloc[0]
             t_start = float(group_times.iloc[0])
             next_pos = group_idx[-1] + 1
-            t_end = float(time_series.iloc[next_pos]) if next_pos < len(time_series) else t_max
+            t_end = float(time_series.iloc[next_pos]) / 60.0 if next_pos < len(time_series) else t_max
 
             style = _PHASE_STYLE.get(phase, _PHASE_STYLE["flight"])
             annotate = phase not in first_annotated
-            kwargs: dict = dict(x0=t_start, x1=t_end, fillcolor=style["fillcolor"], line_width=0)
+            kwargs: dict = dict(x0=t_start / 60.0, x1=t_end, fillcolor=style["fillcolor"], line_width=0)
             if annotate:
                 kwargs.update(
                     annotation_text=style["label"],

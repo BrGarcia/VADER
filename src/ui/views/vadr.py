@@ -22,16 +22,22 @@ def build_base_figure(
     df: pd.DataFrame,
     y_cols: tuple[str, ...],
     fault_columns: tuple[str, ...],
+    exceedance_tuple: tuple[str, str, float] | None = None,
 ) -> object:
     """Constrói e retorna a figura Plotly base sem o cursor temporal.
 
     A.3 — Cacheada por (df, y_cols, fault_columns). Traces, faixas de fase e
     marcadores de falha não mudam enquanto o usuário move o slider — apenas
     o cursor muda. Separar aqui evita rebuild Python + serialização a cada tick.
-
-    O cursor é aplicado pelo chamador via copy.deepcopy + add_vline (A.4).
     """
-    fig = _PLOTTER.plot(df, list(y_cols))
+    exc_config = None
+    if exceedance_tuple:
+        exc_config = {
+            "var": exceedance_tuple[0],
+            "op": exceedance_tuple[1],
+            "val": exceedance_tuple[2]
+        }
+    fig = _PLOTTER.plot(df, list(y_cols), exceedance_config=exc_config)
     fig = _PLOTTER.add_phase_bands(fig, df)
     fig = _PLOTTER.add_fault_markers(fig, df, list(fault_columns), y_column=list(y_cols))
     return fig
@@ -90,6 +96,7 @@ def render_bottom_panel(df: pd.DataFrame) -> None:
                     st.session_state.pop(key, None)
                 st.rerun()
 
+@st.fragment
 def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
     """Monta o layout sincronizado de análise. Retorna y_col selecionado."""
 
@@ -142,31 +149,88 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
         y_col = y_cols[0] if y_cols else None
         st.session_state.last_y_col = y_col
 
+    # ── Configuração de Excedências (Highlight) ──
+    # Lemos os valores salvos no session_state para construir a exceedance_tuple antes do gráfico
+    exc_var = st.session_state.get("exc_var_select", "Nenhuma")
+    exc_op = st.session_state.get("exc_op_select", ">")
+
+    # Atualiza valor padrão do limite caso a variável tenha mudado
+    last_exc_var = st.session_state.get("last_exc_var_state", "Nenhuma")
+    if exc_var != last_exc_var:
+        st.session_state.last_exc_var_state = exc_var
+        default_val = 0.0
+        if exc_var != "Nenhuma" and exc_var in df.columns:
+            try:
+                default_val = float(df[exc_var].mean())
+            except Exception:
+                pass
+        st.session_state.exc_val_input = default_val
+
+    exc_val = st.session_state.get("exc_val_input", 0.0)
+
+    exceedance_tuple = None
+    if exc_var != "Nenhuma" and exc_var in y_cols:
+        exceedance_tuple = (exc_var, exc_op, float(exc_val))
+
     label_vars = " · ".join(f"`{c}`" for c in y_cols)
     titulo_placeholder.markdown(f"#### 📈 Análise Temporal — {label_vars}")
 
     # A.3 — obtém a figura base cacheada (sem cursor)
-    base_fig = build_base_figure(df, tuple(y_cols), tuple(fault_columns))
+    base_fig = build_base_figure(df, tuple(y_cols), tuple(fault_columns), exceedance_tuple)
+
+    # B.3 — Mantém o estado de zoom (X-axis range) entre reruns usando uirevision baseada no arquivo
+    filename = st.session_state.get("current_filename", "vader_file")
+    base_fig.update_layout(uirevision=filename)
 
     # A.4 — deepcopy isola o cursor do cache: o cursor muda a cada tick do slider
     fig = copy.deepcopy(base_fig)
 
-    t_cursor = float(snapshot["TIME"]) if "TIME" in snapshot else 0
+    t_cursor = float(snapshot["TIME"]) if "TIME" in snapshot else 0.0
+    t_cursor_min = t_cursor / 60.0
     fig.add_vline(
-        x=t_cursor / 60,
+        x=t_cursor_min,
         line=dict(color="#FF4B4B", width=2, dash="dash"),
-        annotation_text=f"  t={t_cursor / 60:.2f} min",
+        annotation_text=f"  t={t_cursor_min:.2f} min",
         annotation_font=dict(color="#FF4B4B", size=11),
     )
 
     # ── Renderização Centralizada (Gráfico e Controle) ──
-    # Diminuímos a largura horizontal do gráfico e da barra para forçá-los ao mesmo tamanho exato
-    _, col_centro, _ = st.columns([0.05, 0.9, 0.05])
-    
-    with col_centro:
-        st.plotly_chart(fig, width="stretch", config={"scrollZoom": True}, key=f"main_plot_{y_col}")
-        # Slider de Tempo logo abaixo do gráfico
-        controller.render_slider()
+    # Renderizamos em largura total correspondendo aos cards e ao restante da página
+    st.plotly_chart(fig, width="stretch", config={"scrollZoom": True}, key=f"main_plot_{y_col}")
+
+    # Slider de Tempo logo abaixo do gráfico
+    controller.render_slider()
+
+    # ── Configuração de Excedências (Highlight) ──
+    with st.expander("⚠️ Destacar Excedências (Exceedance Highlight)"):
+        col_exc1, col_exc2, col_exc3 = st.columns([2, 1, 1], gap="small")
+        with col_exc1:
+            st.selectbox(
+                "Variável",
+                options=["Nenhuma"] + y_cols,
+                key="exc_var_select"
+            )
+        with col_exc2:
+            st.selectbox(
+                "Operação",
+                options=[">", "<", ">=", "<=", "=="],
+                key="exc_op_select"
+            )
+        with col_exc3:
+            # Semente o valor padrão apenas se ainda não estiver no session_state
+            if "exc_val_input" not in st.session_state:
+                default_val = 0.0
+                if exc_var != "Nenhuma" and exc_var in df.columns:
+                    try:
+                        default_val = float(df[exc_var].mean())
+                    except Exception:
+                        pass
+                st.session_state["exc_val_input"] = default_val
+            st.number_input(
+                "Valor Limite",
+                format="%.4f",
+                key="exc_val_input"
+            )
 
     st.markdown("---")
 
