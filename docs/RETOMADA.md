@@ -131,9 +131,27 @@ Testado por dry-run que a auditoria completa (`fix/auditoria-tecnica`) é separ�
 
 Smoke test: `streamlit run app.py` sobe sem traceback (HTTP 200); `pytest tests/` — 11 passed. **Validação visual na UI não foi possível** — a extensão Claude-in-Chrome não conectou nesta sessão apesar de o usuário ter configurado a conexão.
 
-**Próximo passo da metodologia main+development:** promover esta branch (`feature/modo-vadr`, agora com a auditoria incorporada) a nova `development`; depois mesclar `feature/correcao-fluidez-grafico-temporal` nela; depois sincronizar `main`. Aguardando decisão do usuário para prosseguir.
-
 **Commit gerado:** `48ea9da` (fix isolado do BUG-07) + commit pendente com o restante (falhas visíveis na UI + arquivamento do TRIMM legado).
+
+## 10. Merge da fluidez do gráfico (01/09/2026) — `dbe7180`
+
+Trazido `feature/correcao-fluidez-grafico-temporal` (que já incluía `fix/auditoria-tecnica` + `development` por baixo) em cima do merge da auditoria. 3 blocos de conflito, todos em `plots.py`, resolvidos combinando a decimação/normalização da outra branch com a conversão de eixo para minutos desta.
+
+**O que veio:**
+- **A.2** — decimação de séries temporais (`_downsample_frame`, stride uniforme, máx. 6000 pontos) — evita recálculo pesado em voos longos.
+- **A.3/A.4** — figura base cacheada via `st.cache_data` (`build_base_figure` em `vadr.py`) + `copy.deepcopy` para isolar o cursor temporal do cache.
+- **A.5** — normaliza os marcadores de falha para a mesma escala 5–95 das séries principais. Antes, os marcadores usavam o valor real bruto, desalinhado visualmente da curva normalizada — bug real de exibição, corrigido; o valor real fica preservado via `customdata` para o hover.
+- **A.6** — modo de análise Básica (28 variáveis) vs. Completa (todas), selecionável na landing page, propagado até `DataLoader.ingest()`. Testado com um CSV real nos dois modos (`basic`: 30 colunas, `complete`: 260 colunas) — sem exceção.
+- **SEC-02** — sanitiza filename de upload contra path traversal (`landing.py`).
+- `st.plotly_chart` passa a usar `width="stretch"` em vez de `use_container_width` (API mais recente do Streamlit).
+
+**Nota de correção:** a nota anterior desta seção dizia que o próximo passo da metodologia era "aguardando decisão do usuário" — o usuário já decidiu trazer a fluidez agora, então esse passo foi executado nesta mesma sessão, antes de qualquer rename/push de branch.
+
+**Engano de processo corrigido:** o merge foi commitado por engano num branch de teste descartável (`_teste_merge_fluidez`) em vez de `feature/modo-vadr` diretamente. Corrigido com `git branch -f feature/modo-vadr _teste_merge_fluidez` — o conteúdo do commit está correto, só a branch estava errada momentaneamente; nada foi perdido.
+
+Smoke test: compila tudo, `pytest tests/` — 11 passed, `streamlit run app.py` sobe sem traceback (HTTP 200), e testei diretamente via Python (sem UI) `build_base_figure`/`TimelinePlotter.plot`/`add_fault_markers`/`add_phase_bands` e `DataLoader.ingest()` nos dois modos, com um CSV real — sem exceções. **Validação visual na UI segue não realizada** (extensão Claude-in-Chrome não conectou nesta sessão).
+
+**Estado da branch agora:** `feature/modo-vadr` tem a auditoria técnica completa + a fluidez do gráfico, tudo local, 15 commits à frente de `origin/feature/modo-vadr`, nada enviado ainda. Próximo passo da metodologia main+development (promover esta branch, sincronizar `main`, limpar branches antigas) segue pendente de decisão do usuário.
 
 ---
 
