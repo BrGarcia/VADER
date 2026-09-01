@@ -118,7 +118,7 @@ Auditoria contra `docs/02_requirements.md` (ver `docs/RETOMADA.md` §13) apontou
 |----|-----------|---------------|
 | **RF02** | Horizonte artificial reagindo a pitch/roll | Toggle `🌐 Horizonte Artificial` no painel central alterna com o `FaultPanel` (S-03 reativada). `AttitudeIndicator` já existia pronto, só estava desconectado da UI. |
 | **RF04** | Cards de Subsistemas (Box Inferior) | `SubsystemCards` restaurado do histórico (versão já com `safe_numeric` da auditoria) e reconectado em `views/vadr.py`: Trem de Pouso, Carga Estrutural (NZ), Resumo do Motor e Manete (PCL). |
-| **RF05.1** | Play/Pause de reprodução automática | Botão ▶/⏸ ao lado do slider. Avanço calculado para percorrer o voo inteiro em ~60 s a 10 FPS, independente do tamanho do arquivo; para sozinho no último quadro, reinicia se acionado no fim, e mover o slider pausa. Usa `st.rerun(scope="fragment")` para reexecutar só o painel de análise, com fallback para rerun completo. |
+| **RF05.1** | Play/Pause de reprodução automática | Botão ▶/⏸ em linha própria acima do slider. Avanço calculado para percorrer o voo inteiro em ~60 s a 5 FPS, independente do tamanho do arquivo; para sozinho no último quadro, reinicia se acionado no fim, e mover o slider pausa. O próximo quadro é agendado por `st.fragment(run_every=...)`, que reexecuta apenas o painel de análise. |
 
 Cobertura: `tests/test_time_controller.py` (9 testes) para a lógica de playback, mais validação de integração via `streamlit.testing.v1.AppTest` nos modos VADR e Completa.
 

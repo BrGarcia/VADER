@@ -100,8 +100,29 @@ def render_bottom_panel(df: pd.DataFrame) -> None:
                     st.session_state.pop(key, None)
                 st.rerun()
 
-@st.fragment
 def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
+    """Renderiza o painel de análise, ligando o temporizador durante o playback.
+
+    RF05.1 — Quando a reprodução automática está ativa, o painel é embrulhado em
+    um fragmento com `run_every`: o próprio Streamlit reexecuta apenas esta
+    área no intervalo do playback. Isso substitui o par
+    `time.sleep()` + `st.rerun()`, que reexecutava a página inteira a cada
+    quadro e provocava cintilação.
+    """
+    timer_ativo = TimeController.is_playing()
+    run_every = TimeController.playback_interval() if timer_ativo else None
+
+    # O fragmento é construído a cada execução para que `run_every` possa
+    # mudar conforme o playback liga/desliga.
+    painel = st.fragment(run_every=run_every)(_render_analysis_panel)
+    return painel(df, show_metadata, timer_ativo)
+
+
+def _render_analysis_panel(
+    df: pd.DataFrame,
+    show_metadata: bool = True,
+    timer_ativo: bool = False,
+) -> str | None:
     """Monta o layout sincronizado de análise. Retorna y_col selecionado."""
 
     controller    = TimeController(df)
@@ -252,5 +273,12 @@ def render_main(df: pd.DataFrame, show_metadata: bool = True) -> str | None:
 
     # Painel inferior (configurações + nova análise)
     render_bottom_panel(df)
+
+    # RF05.1 — Desliga o temporizador quando a reprodução termina.
+    # `run_every` é decidido em render_main, que não roda durante os reruns
+    # automáticos do fragmento; então, ao pausar ou chegar ao fim do voo, é
+    # preciso um rerun completo (único) para o fragmento ser recriado sem timer.
+    if timer_ativo and not TimeController.is_playing():
+        st.rerun()
 
     return y_col

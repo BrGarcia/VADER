@@ -11,10 +11,8 @@ from __future__ import annotations
 
 import json
 import os
-import time
 import streamlit as st
 import pandas as pd
-from streamlit.errors import StreamlitAPIException
 
 from src.utils.logger import get_logger
 from src.utils.helpers import safe_numeric
@@ -137,8 +135,20 @@ class TimeController:
     )
 
     # RF05.1 — reprodução automática
-    _PLAYBACK_FPS: int = 10           # quadros por segundo do playback
-    _PLAYBACK_TARGET_SEC: int = 60    # duração alvo do voo completo em 1x
+    # 5 FPS é o ponto de equilíbrio: cada quadro reenvia a figura Plotly ao
+    # navegador, então taxas mais altas causam cintilação em vez de fluidez.
+    _PLAYBACK_FPS: int = 5            # quadros por segundo do playback
+    _PLAYBACK_TARGET_SEC: int = 60    # duração alvo do voo completo
+
+    @classmethod
+    def playback_interval(cls) -> float:
+        """Intervalo entre quadros, em segundos (para `st.fragment(run_every=...)`)."""
+        return 1 / cls._PLAYBACK_FPS
+
+    @classmethod
+    def is_playing(cls) -> bool:
+        """Indica se a reprodução automática está ativa."""
+        return bool(st.session_state.get(cls.PLAY_KEY, False))
 
     def __init__(self, df: pd.DataFrame) -> None:
         self.df = df
@@ -192,9 +202,10 @@ class TimeController:
         A.1 — Sem st.rerun() manual no slider: o widget já dispara rerun quando
         seu valor muda; o callback on_change apenas sincroniza st.session_state.
 
-        RF05.1 — Durante a reprodução automática, o avanço usa
-        st.rerun(scope="fragment"), reexecutando apenas o painel de análise
-        (render_main é @st.fragment) e reaproveitando a figura base cacheada.
+        RF05.1 — O avanço de quadro acontece aqui, mas quem agenda o próximo é
+        o `run_every` do fragmento em `views/vadr.py`. Assim o Streamlit cuida
+        do temporizador e reexecuta só o painel de análise, sem `time.sleep()`
+        bloqueante nem rerun de página inteira (que causava cintilação).
         """
         n = len(self.df)
         if n == 0:
@@ -205,7 +216,7 @@ class TimeController:
         # ── Avanço do playback ANTES de instanciar o slider ──
         # O Streamlit proíbe alterar o estado de um widget depois que ele foi
         # criado no mesmo run, então o índice precisa avançar aqui.
-        if st.session_state.get(self.PLAY_KEY, False):
+        if self.is_playing():
             next_idx = int(st.session_state.get(self.SESSION_KEY, 0)) + self._playback_step(n)
             if next_idx >= n - 1:
                 next_idx = n - 1                    # chegou ao fim: para no último quadro
@@ -215,44 +226,31 @@ class TimeController:
 
         current_idx = max(0, min(int(st.session_state.get(self.SESSION_KEY, 0)), n - 1))
         st.session_state[self.SESSION_KEY] = current_idx
-        is_playing = bool(st.session_state.get(self.PLAY_KEY, False))
-
-        col_btn, col_slider = st.columns([1, 14], gap="small")
 
         # ── Botão Play/Pause (RF05.1) ──
+        # Fica em linha própria, acima do slider: o slider precisa ocupar a
+        # largura inteira para continuar alinhado com o cursor do gráfico.
+        col_btn, _espaco = st.columns([1, 13], gap="small")
         with col_btn:
             st.button(
-                "⏸" if is_playing else "▶",
+                "⏸" if self.is_playing() else "▶",
                 key=f"{self.PLAY_KEY}_btn",
                 on_click=self._toggle_play,
                 use_container_width=True,
-                help="Pausar reprodução" if is_playing else "Reproduzir o voo automaticamente",
+                help="Pausar reprodução" if self.is_playing() else "Reproduzir o voo automaticamente",
             )
 
-        # ── Slider (Barra de Tempo) ──
+        # ── Slider (Barra de Tempo) — largura total, alinhado ao gráfico ──
         # Sem `value=`: o valor vem exclusivamente do session_state, permitindo
         # que o playback controle o slider sem conflito de estado.
-        with col_slider:
-            st.slider(
-                "Linha do Tempo",
-                min_value=0,
-                max_value=n - 1,
-                key=widget_key,
-                label_visibility="collapsed",
-                on_change=self._sync_slider_state,
-            )
-
-        # ── Agenda o próximo quadro ──
-        # render_main é @st.fragment: o rerun de escopo fragmento reexecuta só o
-        # painel de análise, reaproveitando a figura base cacheada (A.3).
-        # scope="fragment" só é aceito *durante* um rerun de fragmento; no
-        # primeiro quadro (rerun de script completo) caímos no rerun normal.
-        if st.session_state.get(self.PLAY_KEY, False):
-            time.sleep(1 / self._PLAYBACK_FPS)
-            try:
-                st.rerun(scope="fragment")
-            except StreamlitAPIException:
-                st.rerun()
+        st.slider(
+            "Linha do Tempo",
+            min_value=0,
+            max_value=n - 1,
+            key=widget_key,
+            label_visibility="collapsed",
+            on_change=self._sync_slider_state,
+        )
 
         return int(st.session_state[self.SESSION_KEY])
 
