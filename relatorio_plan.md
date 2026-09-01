@@ -4,11 +4,13 @@
 **Branch:** `fix/auditoria-tecnica`  
 **Referência:** `relatorio.md` — Seção 7
 
+> ℹ️ **Triagem em 01/09/2026 (ver `docs/RETOMADA.md`):** plano revisado após período sem atividade. Nenhum item de logging/dedup/testes havia sido executado. Status por item marcado abaixo; itens ✅ foram fechados durante a retomada, os demais seguem válidos e pendentes.
+
 ---
 
 ## Fase 1 — Infraestrutura (pré-requisitos)
 
-### 1.1 — IMP-01: Framework de Logging
+### 1.1 — IMP-01: Framework de Logging — ⏳ pendente
 
 **Arquivo a criar:** `src/utils/logger.py`  
 **Impacto:** Todos os módulos que usam `print()` para erros  
@@ -18,7 +20,7 @@
 2. Substituir todos os `print(f"[VADER]...")` e `print(f"Erro...")` por chamadas ao logger
 3. Arquivos afetados: `components/__init__.py`, `dtc_parser.py`, `trimm_converter.py` (archive), `video_converter.py`
 
-### 1.2 — DUP-01: Função `_safe()` centralizada
+### 1.2 — DUP-01: Função `_safe()` centralizada — ⏳ pendente
 
 **Arquivo a criar:** `src/utils/helpers.py`  
 **Impacto:** `components/__init__.py` (3 ocorrências), `plots.py` (1 ocorrência)
@@ -32,7 +34,7 @@
 
 ## Fase 2 — Eliminação de Duplicações
 
-### 2.1 — DUP-02: Estilos DTC centralizados
+### 2.1 — DUP-02: Estilos DTC centralizados — ⏳ pendente
 
 **Arquivo a criar:** `src/ui/components/dtc_styles.py`  
 **Impacto:** `views/dtc.py`, `views/completa.py`
@@ -42,7 +44,7 @@
 2. A função `aplicar_estilos(df)` recebe o DataFrame e retorna o Styler pronto
 3. Remover definições duplicadas de ambas as views
 
-### 2.2 — DUP-03: Painel de vídeo unificado
+### 2.2 — DUP-03: Painel de vídeo unificado — ⏳ pendente
 
 **Arquivo afetado:** `views/completa.py`  
 
@@ -51,7 +53,7 @@
 2. Substituir os blocos EICAS (linhas 24-65) e CHVC (linhas 67-108) por chamadas à função
 3. Diferenças parametrizadas: `title`, `rotate`, `key_prefix`
 
-### 2.3 — DUP-04: Cor de motor unificada
+### 2.3 — DUP-04: Cor de motor unificada — ⏳ pendente (divergência real confirmada)
 
 **Arquivo afetado:** `components/__init__.py`, `plots.py`  
 
@@ -60,40 +62,48 @@
 2. Extrair para função de módulo `get_engine_color(value, variable)` em `plots.py`
 3. Importar em `components/__init__.py` e remover `_get_engine_color()` local
 
+> **Achado (01/09/2026):** a lógica de limiar (`caution`/`warning`) é idêntica nas duas cópias, mas a cor "normal" diverge: `plots.py` retorna `COLORS["normal"]` (`#FFFFFF`), enquanto `components/__init__.py` retorna um hex fixo `#00FF88`. Pode ser intencional (gauge vs. card), mas não está documentado — confirmar antes de unificar cegamente.
+
 ---
 
 ## Fase 3 — Correções Menores
 
-### 3.1 — BUG-08: Roteador não define `modo_app` para VADR
+### 3.1 — BUG-08: Roteador não define `modo_app` para VADR — ✅ resolvido em 01/09/2026
 
 **Arquivo:** `app.py`  
 **Plano:** Setar `st.session_state.modo_app = "vadr"` no bloco elif do VADR
 
-### 3.2 — DEAD-05: AttitudeIndicator como TODO
+> Corrigido: `landing.py` agora seta `modo_app = "vadr"` nos dois pontos de ingestão, e `app.py` checa `modo == "vadr"` explicitamente em vez de inferir por exclusão (`modo != "completa"`).
+
+### 3.2 — DEAD-05: AttitudeIndicator como TODO — ✅ já estava resolvido
 
 **Arquivo:** `components/__init__.py`  
 **Plano:** Adicionar comentário `# TODO` documentando uso futuro
 
-### 3.3 — IMP-07: FlightMap instanciado como constante de módulo
+> Verificado: comentário já existe (`components/__init__.py:260`) documentando que `self._attitude` está preservado para uso futuro.
+
+### 3.3 — IMP-07: FlightMap instanciado como constante de módulo — ⏸ obsoleto
 
 **Arquivo:** `views/vadr.py`  
 **Plano:** Mover instanciação para nível de módulo `_FLIGHT_MAP = FlightMap()`
+
+> **Achado (01/09/2026):** `FlightMap` (`src/ui/components/flight_map.py`) não é mais importado em lugar nenhum do código — o recurso de mapa foi removido da UI num commit posterior a este plano. O item ficou obsoleto; a ação recomendada agora é decidir entre remover o arquivo morto ou mantê-lo como base para reativação futura (ver ROADMAP S-16).
 
 ---
 
 ## Fase 4 — Melhorias de Arquitetura (IMP-03..09)
 
-### 4.1 — IMP-09: Validação de estrutura CSV
+### 4.1 — IMP-09: Validação de estrutura CSV — ⏳ pendente
 
 **Arquivo:** `data_loader.py`  
 **Plano:** Adicionar checagem de colunas TIME/STIME após leitura
 
-### 4.2 — IMP-05: Imports no topo dos módulos
+### 4.2 — IMP-05: Imports no topo dos módulos — ⏳ pendente
 
 **Arquivos:** `landing.py`, `completa.py`  
 **Plano:** Mover imports de `DtcParser`, `video_converter`, `local_scanner` para o topo
 
-### 4.3 — IMP-02: Estrutura de testes (skeleton)
+### 4.3 — IMP-02: Estrutura de testes (skeleton) — ⏳ pendente
 
 **Diretório a criar:** `tests/`  
 **Plano:** Criar skeleton com `conftest.py` e um teste básico para `data_loader` e `dtc_parser`

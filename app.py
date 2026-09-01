@@ -44,7 +44,7 @@ def main() -> None:
     elif modo == "completa":
         render_completa()
         
-    elif df_cached is not None and modo != "completa":
+    elif modo == "vadr" and df_cached is not None:
         # ── Página de Análise VADR ──
         render_main(df_cached)
         

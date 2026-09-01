@@ -4,6 +4,8 @@
 **Schema de Telemetria:** `docs/schemas/variaveis.json`
 **Versão:** 2.0
 
+> ⚠️ **Divergência detectada em 01/09/2026:** o código (`src/ui/plots.py`) carrega hoje `docs/schemas/variaveis_v1.json`, não `variaveis.json`. Os dois arquivos não são equivalentes — `variaveis_v1.json` tem uma cobertura de variáveis diferente (ex.: `AS+` em vez de `AS`). O índice abaixo ainda reflete `variaveis.json` e não foi reconciliado com o schema `v1` realmente em uso. Antes de usar este documento como referência para código novo, confirme contra `variaveis_v1.json` e o `aircraft_telemetry_schema_v1.json`.
+
 ---
 
 ## Objetivo deste Documento

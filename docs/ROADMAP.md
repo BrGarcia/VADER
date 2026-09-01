@@ -85,8 +85,8 @@ Esta seção documenta problemas identificados durante a inspeção do código a
 
 | # | Arquivo | Problema | Impacto |
 |---|---------|----------|---------|
-| B-07 | `ui_components/__init__.py` | `MWC_TRANSLATION` tem apenas 5 entradas mapeadas. Códigos desconhecidos geram mensagem genérica. | Usuário não consegue interpretar alertas PMU não mapeados. |
-| B-08 | `data_loader.py` | `"Rec #"` e `"Rec"` no conjunto `excluded` podem não capturar variações com espaço/cerquilha. | Inconsistência na filtragem de colunas. |
+| B-07 | `ui_components/__init__.py` | ~~`MWC_TRANSLATION` tem apenas 5 entradas mapeadas. Códigos desconhecidos geram mensagem genérica.~~ | ✅ **Verificado em 01/09/2026** — `MWC_TRANSLATION` agora é carregado dinamicamente de `docs/schemas/mwc_data_catalogo.json` (49 códigos catalogados). |
+| B-08 | `data_loader.py` | ~~`"Rec #"` e `"Rec"` no conjunto `excluded` podem não capturar variações com espaço/cerquilha.~~ | ✅ **Verificado em 01/09/2026** — todos os 10 CSVs reais disponíveis em `data/raw/` usam consistentemente `"Rec #"`; conjunto `excluded` já cobre a variante observada. Sem evidência de caso real quebrado. |
 | B-09 | `fault_panel.py` | ~~Textos longos de alerta transbordavam o box de 16.66% de largura.~~ | ✅ **Corrigido (S-06)** — `overflow:hidden; text-overflow:ellipsis` + tooltip `title`. |
 
 ---

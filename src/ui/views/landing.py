@@ -98,6 +98,7 @@ def render_landing() -> None:
                     if new_df is not None:
                         st.session_state.current_df = new_df
                         st.session_state.current_filename = uploaded.name
+                        st.session_state.modo_app = "vadr"
                         st.rerun()
                     else:
                         st.error("❌ Falha ao processar o arquivo CSV.")
@@ -107,6 +108,7 @@ def render_landing() -> None:
                     if new_df is not None:
                         st.session_state.current_df = new_df
                         st.session_state.current_filename = selected_recent
+                        st.session_state.modo_app = "vadr"
                         st.rerun()
                     else:
                         st.error("❌ Falha ao carregar o arquivo do histórico.")

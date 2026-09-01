@@ -56,15 +56,38 @@ Depois das Fases A e B, evitar dispersão: escolher **uma** frente por ciclo, n�
 
 ## 3. Checklist de Retomada (ordem de execução)
 
-- [ ] Resolver `git status` (commit/descartar cada item pendente e não rastreado)
-- [ ] Smoke test dos 4 modos da aplicação
-- [ ] Revisar `relatorio_plan.md`: manter, atualizar ou descartar
-- [ ] Consolidar schemas de variáveis duplicados
-- [ ] Fechar B-07 e B-08 (débitos menores do ROADMAP)
+- [x] Resolver `git status` (commit/descartar cada item pendente e não rastreado)
+- [x] Smoke test dos 4 modos da aplicação *(parcial — ver nota)*
+- [x] Revisar `relatorio_plan.md`: manter, atualizar ou descartar
+- [x] Consolidar schemas de variáveis duplicados *(apontado; reconciliação total ainda pendente)*
+- [x] Fechar B-07 e B-08 (débitos menores do ROADMAP)
 - [ ] Escolher e declarar a frente ativa do próximo ciclo
 
 ---
 
-## 4. Princípio Norteador
+## 5. Fase A — Resultado (01/09/2026)
+
+- **Achado crítico:** dois CSVs de telemetria real ("Mishap Time History Data Set") estavam versionados em `docs/CSV/`, fora da proteção de sigilo que já cobre `/data/`. Removidos do HEAD (`git rm --cached`) e `docs/CSV/*.csv` adicionado ao `.gitignore`. **O histórico do git ainda contém esses arquivos** — purga completa (`git filter-repo`/BFG) é uma decisão separada, ainda em aberto.
+- Working tree já estava limpo (commit `4dcc857`, feito fora desta sessão, consolidou tudo que estava pendente na Fase A).
+- Smoke test: app sobe sem erro (`streamlit run app.py`, HTTP 200, sem traceback no log) com as dependências do `venv/` (Streamlit 1.50, pandas 2.3.3, plotly 5.24.1, pyarrow 17.0 — todas compatíveis com `requirements.txt`). **Não foi possível validar visualmente os 4 modos** (extensão Claude-in-Chrome não conectada nesta máquina) — só a inicialização do servidor foi confirmada.
+
+## 6. Fase B — Resultado (01/09/2026)
+
+Triagem item a item do débito conhecido, comparando o que os documentos afirmam contra o estado real do código:
+
+| Item | Situação encontrada | Ação tomada |
+|------|---------------------|-------------|
+| ROADMAP B-07 (`MWC_TRANSLATION` incompleto) | Já resolvido — hoje carrega dinamicamente de `docs/schemas/mwc_data_catalogo.json` (49 códigos) | Marcado ✅ no ROADMAP |
+| ROADMAP B-08 (variação `"Rec #"`/`"Rec"`) | Não reproduzido — os 10 CSVs reais em `data/raw/` usam consistentemente `"Rec #"`, já coberto pelo `excluded` | Marcado ✅ no ROADMAP como verificado |
+| `relatorio_plan.md` BUG-08 (roteador não seta `modo_app` para VADR) | Confirmado — rota dependia de exclusão implícita (`modo != "completa"`) | **Corrigido**: `landing.py` seta `modo_app = "vadr"`; `app.py` checa `modo == "vadr"` explicitamente |
+| `relatorio_plan.md` DEAD-05 (TODO do AttitudeIndicator) | Já resolvido — comentário já existe em `components/__init__.py:260` | Marcado ✅ |
+| `relatorio_plan.md` IMP-07 (FlightMap como constante de módulo) | **Obsoleto** — `FlightMap` não é mais importado em nenhum lugar do código (recurso de mapa removido da UI após este plano ser escrito) | Marcado ⏸ obsoleto; decisão pendente: remover `flight_map.py` ou manter para reativação futura (ROADMAP S-16) |
+| `relatorio_plan.md` DUP-04 (cor de motor duplicada) | Confirmado duplicado — **e divergente**: `plots.py` usa branco (`COLORS["normal"]`) para estado normal, `components/__init__.py` usa verde fixo (`#00FF88`) | Documentado no plano; não unificado (pode ser intencional, requer confirmação antes de mexer) |
+| `relatorio_plan.md` — demais itens (IMP-01 logger, DUP-01 `_safe`, DUP-02 estilos DTC, DUP-03 painel de vídeo, IMP-09 validação CSV, IMP-05 imports, IMP-02 testes) | Nenhum foi implementado | Mantidos como pendentes, plano ainda válido |
+| Schemas `variaveis.json` vs `variaveis_v1.json` | **Divergência real**: o código (`src/ui/plots.py`) usa `variaveis_v1.json`, mas `docs/04_data_model.md` e `ROADMAP.md` ainda apontam `variaveis.json` como fonte de verdade. Os dois arquivos têm cobertura de variáveis diferente (ex.: `AS+` vs `AS`) | Aviso adicionado no topo de `docs/04_data_model.md`; **reconciliação completa do índice de variáveis não foi feita** — é uma decisão de conteúdo, não uma correção mecânica |
+
+---
+
+## 7. Princípio Norteador
 
 Depois de um período parado, **não conte com a memória do estado anterior** — trate o repositório como se fosse herdado de outra pessoa. Verifique antes de assumir: se um arquivo de plano ou roadmap menciona algo como "feito", confirme no código atual antes de construir em cima dele.
