@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import streamlit as st
 import pandas as pd
+from streamlit.errors import StreamlitAPIException
 
 from src.utils.logger import get_logger
 from src.utils.helpers import safe_numeric
@@ -125,53 +127,133 @@ class TimeController:
     """Gerencia o estado temporal global via st.session_state."""
 
     SESSION_KEY: str = "current_time_index"
+    PLAY_KEY: str = "is_playing"
+
+    # Todas as chaves de session_state que precisam ser limpas ao trocar de voo
+    STATE_KEYS: tuple[str, ...] = (
+        "current_time_index",
+        "current_time_index_widget",
+        "is_playing",
+    )
+
+    # RF05.1 — reprodução automática
+    _PLAYBACK_FPS: int = 10           # quadros por segundo do playback
+    _PLAYBACK_TARGET_SEC: int = 60    # duração alvo do voo completo em 1x
 
     def __init__(self, df: pd.DataFrame) -> None:
         self.df = df
         self._init_session_state()
 
     def _init_session_state(self) -> None:
-        """Inicializa st.session_state.current_time_index e play_state na primeira execução."""
+        """Inicializa índice temporal, estado do slider e do playback."""
         if self.SESSION_KEY not in st.session_state:
             st.session_state[self.SESSION_KEY] = 0
-        if "is_playing" not in st.session_state:
-            st.session_state.is_playing = False
+        if self.PLAY_KEY not in st.session_state:
+            st.session_state[self.PLAY_KEY] = False
+
+        # O valor do slider é gerenciado exclusivamente via session_state (sem
+        # o parâmetro `value=`), para que o playback possa movê-lo programaticamente.
+        widget_key = f"{self.SESSION_KEY}_widget"
+        n = len(self.df)
+        if widget_key not in st.session_state:
+            st.session_state[widget_key] = 0
+        elif n and st.session_state[widget_key] > n - 1:
+            # Arquivo novo, menor que o anterior: evita índice fora da faixa
+            st.session_state[widget_key] = 0
+            st.session_state[self.SESSION_KEY] = 0
 
     def _sync_slider_state(self) -> None:
         """Callback on_change: sincroniza o widget do slider com SESSION_KEY.
 
         Chamado pelo Streamlit antes do próximo rerun — não dispara rerun extra.
+        Mover o slider manualmente também interrompe a reprodução automática.
         """
         st.session_state[self.SESSION_KEY] = int(
             st.session_state.get(f"{self.SESSION_KEY}_widget", 0)
         )
+        st.session_state[self.PLAY_KEY] = False
+
+    def _toggle_play(self) -> None:
+        """Callback do botão Play/Pause (RF05.1)."""
+        n = len(self.df)
+        # Se estiver no fim da gravação, Play reinicia do começo
+        if not st.session_state[self.PLAY_KEY] and st.session_state[self.SESSION_KEY] >= n - 1:
+            st.session_state[self.SESSION_KEY] = 0
+            st.session_state[f"{self.SESSION_KEY}_widget"] = 0
+        st.session_state[self.PLAY_KEY] = not st.session_state[self.PLAY_KEY]
+
+    def _playback_step(self, n: int) -> int:
+        """Quantos índices avançar por quadro para o voo inteiro rodar em ~60s."""
+        return max(1, round(n / (self._PLAYBACK_TARGET_SEC * self._PLAYBACK_FPS)))
 
     def render_slider(self, time_column: str = "TIME") -> int:
-        """Renderiza o slider de tempo e retorna o índice selecionado.
+        """Renderiza o controle Play/Pause + slider de tempo e retorna o índice.
 
-        A.1 — Remove st.rerun() manual: o slider já dispara rerun quando seu
-        valor muda; o callback on_change apenas sincroniza st.session_state
-        antes do próximo ciclo, sem adicionar um rerun extra.
+        A.1 — Sem st.rerun() manual no slider: o widget já dispara rerun quando
+        seu valor muda; o callback on_change apenas sincroniza st.session_state.
+
+        RF05.1 — Durante a reprodução automática, o avanço usa
+        st.rerun(scope="fragment"), reexecutando apenas o painel de análise
+        (render_main é @st.fragment) e reaproveitando a figura base cacheada.
         """
         n = len(self.df)
         if n == 0:
             return 0
 
-        current_idx: int = st.session_state.get(self.SESSION_KEY, 0)
-        current_idx = max(0, min(current_idx, n - 1))
+        widget_key = f"{self.SESSION_KEY}_widget"
+
+        # ── Avanço do playback ANTES de instanciar o slider ──
+        # O Streamlit proíbe alterar o estado de um widget depois que ele foi
+        # criado no mesmo run, então o índice precisa avançar aqui.
+        if st.session_state.get(self.PLAY_KEY, False):
+            next_idx = int(st.session_state.get(self.SESSION_KEY, 0)) + self._playback_step(n)
+            if next_idx >= n - 1:
+                next_idx = n - 1                    # chegou ao fim: para no último quadro
+                st.session_state[self.PLAY_KEY] = False
+            st.session_state[self.SESSION_KEY] = next_idx
+            st.session_state[widget_key] = next_idx
+
+        current_idx = max(0, min(int(st.session_state.get(self.SESSION_KEY, 0)), n - 1))
+        st.session_state[self.SESSION_KEY] = current_idx
+        is_playing = bool(st.session_state.get(self.PLAY_KEY, False))
+
+        col_btn, col_slider = st.columns([1, 14], gap="small")
+
+        # ── Botão Play/Pause (RF05.1) ──
+        with col_btn:
+            st.button(
+                "⏸" if is_playing else "▶",
+                key=f"{self.PLAY_KEY}_btn",
+                on_click=self._toggle_play,
+                use_container_width=True,
+                help="Pausar reprodução" if is_playing else "Reproduzir o voo automaticamente",
+            )
 
         # ── Slider (Barra de Tempo) ──
-        st.slider(
-            "Linha do Tempo",
-            min_value=0,
-            max_value=n - 1,
-            value=current_idx,
-            key=f"{self.SESSION_KEY}_widget",
-            label_visibility="collapsed",
-            on_change=self._sync_slider_state,
-        )
+        # Sem `value=`: o valor vem exclusivamente do session_state, permitindo
+        # que o playback controle o slider sem conflito de estado.
+        with col_slider:
+            st.slider(
+                "Linha do Tempo",
+                min_value=0,
+                max_value=n - 1,
+                key=widget_key,
+                label_visibility="collapsed",
+                on_change=self._sync_slider_state,
+            )
 
-        # ── Lógica de Reprodução Automática (Removida a pedido) ──
+        # ── Agenda o próximo quadro ──
+        # render_main é @st.fragment: o rerun de escopo fragmento reexecuta só o
+        # painel de análise, reaproveitando a figura base cacheada (A.3).
+        # scope="fragment" só é aceito *durante* um rerun de fragmento; no
+        # primeiro quadro (rerun de script completo) caímos no rerun normal.
+        if st.session_state.get(self.PLAY_KEY, False):
+            time.sleep(1 / self._PLAYBACK_FPS)
+            try:
+                st.rerun(scope="fragment")
+            except StreamlitAPIException:
+                st.rerun()
+
         return int(st.session_state[self.SESSION_KEY])
 
     def get_snapshot(self, time_index: int) -> pd.Series:
@@ -187,8 +269,10 @@ class TimeController:
 class AttitudeBox:
     """Renderiza o Box Superior com o horizonte artificial e dados críticos."""
 
+    # Chave do toggle Horizonte Artificial / Painel de Alertas no session_state
+    HORIZON_TOGGLE_KEY: str = "show_artificial_horizon"
+
     def __init__(self) -> None:
-        # TODO(roadmap): Reativar AttitudeIndicator quando integrar horizonte artificial 3D
         self._attitude = AttitudeIndicator()
         self._fault_panel = FaultPanel()
 
@@ -235,30 +319,46 @@ class AttitudeBox:
             st.markdown(html_metrics, unsafe_allow_html=True)
 
         with col_horizon:
-            # ── Painel de Alertas EICAS (FaultPanel) ──
-            # NOTA: self._attitude (AttitudeIndicator) está preservado para uso futuro
-            # no bloco de Análise de Atitude + Geolocalização (Google Maps API).
-            # O toggle 🌐 Horizonte Artificial foi removido desta tela — S-03 suspensa.
-            mwc_code = int(_safe("MWC_DATA"))
-            mwc_text, _ = MWC_TRANSLATION.get(mwc_code, ("", ""))
+            # ── RF02: alterna entre Horizonte Artificial e Painel de Alertas EICAS ──
+            # O painel de alertas (RF06) segue como padrão; o horizonte fica a um
+            # clique de distância para não sacrificar nenhum dos dois requisitos.
+            mostrar_horizonte = st.toggle(
+                "🌐 Horizonte Artificial",
+                key=self.HORIZON_TOGGLE_KEY,
+                help="Alterna entre o horizonte artificial (atitude) e o painel de alertas EICAS.",
+            )
 
-            status_list = []
-            for alert in _ALERT_DEFS:
-                is_active = False
-                msg = alert["mensagem"]
+            if mostrar_horizonte:
+                fig_horizonte = self._attitude.plot(pitch, roll)
+                # Alinha a altura com os boxes numéricos laterais (380px)
+                fig_horizonte.update_layout(height=345)
+                st.plotly_chart(
+                    fig_horizonte,
+                    width="stretch",
+                    config={"displayModeBar": False, "staticPlot": True},
+                    key="attitude_horizon_plot",
+                )
+            else:
+                mwc_code = int(_safe("MWC_DATA"))
+                mwc_text, _ = MWC_TRANSLATION.get(mwc_code, ("", ""))
 
-                if msg in snapshot.index and snapshot.get(msg, 0) == 1:
-                    is_active = True
-                elif mwc_text and msg == mwc_text:
-                    is_active = True
+                status_list = []
+                for alert in _ALERT_DEFS:
+                    is_active = False
+                    msg = alert["mensagem"]
 
-                status_list.append({
-                    "name": msg,
-                    "level": alert["categoria"].upper(),
-                    "active": is_active,
-                })
+                    if msg in snapshot.index and snapshot.get(msg, 0) == 1:
+                        is_active = True
+                    elif mwc_text and msg == mwc_text:
+                        is_active = True
 
-            self._fault_panel.render(status_list)
+                    status_list.append({
+                        "name": msg,
+                        "level": alert["categoria"].upper(),
+                        "active": is_active,
+                    })
+
+                self._fault_panel.render(status_list)
 
         with col_engine:
             # Lógica de cor para PCL e FF
@@ -424,5 +524,123 @@ class EICASPanel:
         return ("", "normal")
 
 
-# SubsystemCards foi removido deliberadamente da UI em commit anterior
-# (simplificação do VADR). Não reintroduzido no merge da auditoria.
+
+
+# -----------------------------------------------------------------------
+# Cards de Subsistemas — Fase 2
+# -----------------------------------------------------------------------
+
+class SubsystemCards:
+    """Renderiza os cards informativos do Box Inferior."""
+
+    _CARD_BASE = (
+        "background:#0E1117; border:1px solid #2D2D2D; border-radius:8px; "
+        "padding:12px; text-align:center; font-family:monospace; "
+        "height:130px; display:flex; flex-direction:column; justify-content:center; "
+        "box-sizing:border-box;"
+    )
+
+    def render_all(self, snapshot: pd.Series) -> None:
+        """Renderiza os quatro cards de subsistemas lado a lado."""
+
+        # DUP-01: usa safe_numeric centralizado
+        def _safe(key: str, fallback: float = 0.0) -> float:
+            return safe_numeric(snapshot, key, fallback)
+
+        ldg = int(_safe("LDG"))
+        wow = int(_safe("WOW"))
+        nz  = _safe("NZ")
+
+        col_gear, col_nz, col_engine, col_pcl = st.columns(4)
+
+        with col_gear:
+            self.render_landing_gear_card(ldg, wow)
+        with col_nz:
+            self.render_structural_load_card(nz)
+        with col_engine:
+            self.render_engine_summary_card(snapshot)
+        with col_pcl:
+            self._render_pcl_card(_safe("PCL"))
+
+    def render_landing_gear_card(self, ldg: int, wow: int) -> None:
+        """Exibe o card do Trem de Pouso com identificação das variáveis."""
+        gear_label = "ABAIXADO" if ldg == 0 else "RECOLHIDO"
+        gear_color = "#00FF88" if ldg == 0 else "#FFC107"
+        phase_label = "SOLO" if wow == 1 else "AR"
+        phase_color = "#A07850" if wow == 1 else "#4A90D9"
+
+        st.markdown(
+            f"<div style='{self._CARD_BASE}'>"
+            f"  <div style='font-size:0.65rem;color:#888;letter-spacing:1px;'>TREM DE POUSO</div>"
+            f"  <div style='font-size:1.0rem;font-weight:bold;color:{gear_color}; margin-top:4px;'><span style='color: #888; font-size: 0.75rem;'>LDG:</span> {gear_label}</div>"
+            f"  <div style='font-size:1.0rem;font-weight:bold;color:{phase_color}; margin-top:2px;'><span style='color: #888; font-size: 0.75rem;'>WOW:</span> {phase_label}</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    def render_structural_load_card(self, nz: float) -> None:
+        """Exibe card de Carga Estrutural (Força G). Alerta visual se NZ > 4.0G."""
+        alert = abs(nz) > NZ_ALERT_THRESHOLD
+        nz_color = "#FF4B4B" if alert else "#00FF88"
+        border_color = "#FF4B4B" if alert else "#2D2D2D"
+        alert_text = "<div style='font-size:0.65rem;color:#FF4B4B;'>⚠ LIMITE ESTRUTURAL</div>" if alert else ""
+
+        st.markdown(
+            f"<div style='{self._CARD_BASE} border-color:{border_color};'>"
+            f"  <div style='font-size:0.65rem;color:#888;letter-spacing:1px;'>CARGA ESTRUTURAL</div>"
+            f"  <div style='font-size:1.6rem;font-weight:bold;color:{nz_color};'>{nz:+.2f} G</div>"
+            f"  {alert_text}"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    def render_engine_summary_card(self, snapshot: pd.Series) -> None:
+        """Exibe card resumido do motor: ITT, FF e status geral."""
+        # DUP-01: usa safe_numeric centralizado
+        itt = safe_numeric(snapshot, "ITT")
+        ff  = safe_numeric(snapshot, "FF")
+        ng  = safe_numeric(snapshot, "NG")
+
+        itt_color = "#FF4B4B" if itt > 1000 else "#FFC107" if itt > 850 else "#00FF88"
+        ff_color  = "#FF4B4B" if ff  > 480  else "#FFC107" if ff  > 420 else "#00FF88"
+
+        st.markdown(
+            f"<div style='{self._CARD_BASE}'>"
+            f"  <div style='font-size:0.65rem;color:#888;letter-spacing:1px;'>MOTOR</div>"
+            f"  <div style='font-size:0.8rem;margin-top:4px;'>"
+            f"    <span style='color:#888;'>ITT </span>"
+            f"    <span style='color:{itt_color};font-weight:bold;'>{itt:.0f}°C</span>"
+            f"  </div>"
+            f"  <div style='font-size:0.8rem;margin-top:2px;'>"
+            f"    <span style='color:#888;'>FF &nbsp;</span>"
+            f"    <span style='color:{ff_color};font-weight:bold;'>{ff:.0f} kg/h</span>"
+            f"  </div>"
+            f"  <div style='font-size:0.8rem;margin-top:2px;'>"
+            f"    <span style='color:#888;'>Ng &nbsp;</span>"
+            f"    <span style='color:#FAFAFA;'>{ng:.1f}%</span>"
+            f"  </div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    def _render_pcl_card(self, pcl: float) -> None:
+        """Exibe a posição da Manete de Potência (PCL)."""
+        # PCL range operacional: -20 a +179°
+        # Zonas aproximadas: < 0° = Ground Idle, 0-60° = Flight Idle→Cruise, > 130° = Max Power
+        if pcl < 0:
+            pcl_label, pcl_color = "GROUND IDLE", "#4A90D9"
+        elif pcl < 60:
+            pcl_label, pcl_color = "IDLE / CRUISE", "#00FF88"
+        elif pcl < 130:
+            pcl_label, pcl_color = "CRUISE / CLIMB", "#FFC107"
+        else:
+            pcl_label, pcl_color = "MAX POWER", "#FF4B4B"
+
+        st.markdown(
+            f"<div style='{self._CARD_BASE}'>"
+            f"  <div style='font-size:0.65rem;color:#888;letter-spacing:1px;'>MANETE (PCL)</div>"
+            f"  <div style='font-size:1.6rem;font-weight:bold;color:{pcl_color};'>{pcl:.1f}°</div>"
+            f"  <div style='font-size:0.7rem;color:{pcl_color};margin-top:2px;'>{pcl_label}</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )

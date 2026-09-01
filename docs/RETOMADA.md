@@ -183,6 +183,26 @@ Com `development`, `fix/auditoria-tecnica`, `feature/correcao-fluidez-grafico-te
 
 ---
 
+## 13. Fechamento dos requisitos do Modo VADR (01/09/2026)
+
+Auditoria do Modo VADR contra a spec formal (`docs/02_requirements.md`) encontrou **três requisitos não atendidos** — todos por decisões deliberadas de simplificação tomadas ao longo das iterações, não por bugs:
+
+| RF | Situação encontrada | Ação |
+|----|---------------------|------|
+| **RF02** — horizonte artificial reagindo a pitch/roll | Só numérico; `AttitudeIndicator` existia completo mas desconectado da UI (S-03 "suspensa") | **Implementado** — toggle `🌐 Horizonte Artificial` alterna com o painel de alertas. O `FaultPanel` (RF06) segue como padrão, então nenhum dos dois requisitos foi sacrificado. |
+| **RF04** — Cards de Subsistemas | Ausente; classe removida em commit de simplificação e não reintroduzida nos merges de hoje (decisão consciente na época) | **Implementado** — `SubsystemCards` restaurado do commit `bfad9fa` (versão já refatorada com `safe_numeric`) e religado em `views/vadr.py`. |
+| **RF05.1** — Play/Pause automático | Ausente; código dizia literalmente "Removida a pedido" | **Implementado** — botão ▶/⏸ ao lado do slider, ~60 s por voo a 10 FPS independentemente do tamanho do arquivo. |
+
+**Detalhes de implementação do playback (RF05.1):**
+- Avanço acontece **antes** de instanciar o slider — o Streamlit proíbe alterar o estado de um widget depois que ele foi criado no mesmo run.
+- O slider passou a ser controlado exclusivamente via `session_state` (sem `value=`), para que o playback consiga movê-lo sem conflito de estado.
+- `st.rerun(scope="fragment")` reexecuta só o painel de análise (`render_main` é `@st.fragment`), reaproveitando a figura base cacheada. **Bug pego em teste:** esse escopo só é válido *durante* um rerun de fragmento e explodia no primeiro clique — resolvido com fallback para `st.rerun()` completo.
+- `TimeController.STATE_KEYS` centraliza as chaves de estado temporal, agora limpas ao trocar de voo (antes, um voo mais curto que o anterior deixaria o slider fora da faixa).
+
+**Validação:** `tests/test_time_controller.py` com 9 testes unitários (passo do playback, parada no fim, reinício no fim, pausa ao mover o slider, correção de índice fora da faixa) — suíte total foi de 11 para 20 testes. Integração validada com `streamlit.testing.v1.AppTest` nos modos VADR e Completa, já que a extensão Claude-in-Chrome não conectou nesta sessão.
+
+---
+
 ## 7. Princípio Norteador
 
 Depois de um período parado, **não conte com a memória do estado anterior** — trate o repositório como se fosse herdado de outra pessoa. Verifique antes de assumir: se um arquivo de plano ou roadmap menciona algo como "feito", confirme no código atual antes de construir em cima dele.
