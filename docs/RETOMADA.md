@@ -81,10 +81,17 @@ Triagem item a item do débito conhecido, comparando o que os documentos afirmam
 | ROADMAP B-08 (variação `"Rec #"`/`"Rec"`) | Não reproduzido — os 10 CSVs reais em `data/raw/` usam consistentemente `"Rec #"`, já coberto pelo `excluded` | Marcado ✅ no ROADMAP como verificado |
 | `relatorio_plan.md` BUG-08 (roteador não seta `modo_app` para VADR) | Confirmado — rota dependia de exclusão implícita (`modo != "completa"`) | **Corrigido**: `landing.py` seta `modo_app = "vadr"`; `app.py` checa `modo == "vadr"` explicitamente |
 | `relatorio_plan.md` DEAD-05 (TODO do AttitudeIndicator) | Já resolvido — comentário já existe em `components/__init__.py:260` | Marcado ✅ |
-| `relatorio_plan.md` IMP-07 (FlightMap como constante de módulo) | **Obsoleto** — `FlightMap` não é mais importado em nenhum lugar do código (recurso de mapa removido da UI após este plano ser escrito) | Marcado ⏸ obsoleto; decisão pendente: remover `flight_map.py` ou manter para reativação futura (ROADMAP S-16) |
+| `relatorio_plan.md` IMP-07 (FlightMap como constante de módulo) | **Obsoleto** — `FlightMap` não é mais importado em nenhum lugar do código (recurso de mapa removido da UI após este plano ser escrito) | Marcado ⏸ obsoleto; **decidido manter** `flight_map.py` como está, para reativação quando o projeto estiver mais robusto (ROADMAP S-16) |
 | `relatorio_plan.md` DUP-04 (cor de motor duplicada) | Confirmado duplicado — **e divergente**: `plots.py` usa branco (`COLORS["normal"]`) para estado normal, `components/__init__.py` usa verde fixo (`#00FF88`) | Documentado no plano; não unificado (pode ser intencional, requer confirmação antes de mexer) |
 | `relatorio_plan.md` — demais itens (IMP-01 logger, DUP-01 `_safe`, DUP-02 estilos DTC, DUP-03 painel de vídeo, IMP-09 validação CSV, IMP-05 imports, IMP-02 testes) | Nenhum foi implementado | Mantidos como pendentes, plano ainda válido |
 | Schemas `variaveis.json` vs `variaveis_v1.json` | **Divergência real**: o código (`src/ui/plots.py`) usa `variaveis_v1.json`, mas `docs/04_data_model.md` e `ROADMAP.md` ainda apontam `variaveis.json` como fonte de verdade. Os dois arquivos têm cobertura de variáveis diferente (ex.: `AS+` vs `AS`) | Aviso adicionado no topo de `docs/04_data_model.md`; **reconciliação completa do índice de variáveis não foi feita** — é uma decisão de conteúdo, não uma correção mecânica |
+| `docs/DTC_CONVERSOR_DMP.md` (arquivo novo, não rastreado) | Documentação criada para orientar o entendimento do conversor DTC/DMP | Versionado como está, sem alteração de conteúdo |
+
+**Commits gerados na Fase B:**
+- `2b696db` — fix do roteamento VADR (`modo_app`) + toda a documentação de triagem acima
+- `d04d463` — `docs/DTC_CONVERSOR_DMP.md`
+
+> Ambos locais na branch `feature/modo-vadr`, ainda **não enviados** para `origin`.
 
 ---
 
