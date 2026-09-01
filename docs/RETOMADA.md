@@ -155,6 +155,32 @@ Smoke test: compila tudo, `pytest tests/` — 11 passed, `streamlit run app.py` 
 
 **Estado da branch agora:** `feature/modo-vadr` tem a auditoria técnica completa + a fluidez do gráfico, tudo local, 15 commits à frente de `origin/feature/modo-vadr`, nada enviado ainda. Próximo passo da metodologia main+development (promover esta branch, sincronizar `main`, limpar branches antigas) segue pendente de decisão do usuário.
 
+## 11. `development` também tinha divergido — merge extra (01/09/2026) — `f24b959`
+
+Ao tentar promover `feature/modo-vadr` a `development`, descoberto que `origin/development` **não era mais ancestral** — seguiu evoluindo sozinha (11 commits) depois que `feature/correcao-fluidez-grafico-temporal` foi cortada dela. Um push normal teria sido rejeitado; forçar teria destruído esse trabalho. Trazido também antes de prosseguir.
+
+**O que veio (trabalho real, não apenas variações cosméticas):**
+- Filtro de destaque de excedência (exceedance highlight) no gráfico temporal — feature nova, com seletor de variável/operador/valor limite na UI.
+- Variável `FR` (Fuel Remaining) no forward-fill e na análise básica.
+- `BASIC_ANALYSIS_COLUMNS` explícita para o modo básico; modo completo expõe todas as colunas sem filtro de validade.
+- Gráfico mais alto (+30%), `ticksuffix=" min"`.
+- `@st.fragment` em `render_main` — reruns parciais, mais fluido.
+
+**7 conflitos, quase todos cosméticos** (`/60` vs `/60.0`). Um exigiu atenção real: o auto-merge tinha **revertido silenciosamente** `st.plotly_chart` de volta para `use_container_width=True` (API antiga) sem marcar conflito — peguei isso conferindo linha a linha, não veio com marcador `<<<<<<<`. Restaurado `width="stretch"`, já validado funcionando.
+
+Smoke test: compila, `pytest` 11 passed, `streamlit run` sem traceback, e testei via Python o pipeline completo incluindo o novo `exceedance_config` — sem exceções.
+
+## 12. Promoção de branches e sincronização (01/09/2026)
+
+Com `development`, `fix/auditoria-tecnica`, `feature/correcao-fluidez-grafico-temporal` e `main` todas confirmadas como ancestrais de `feature/modo-vadr` (`f24b959`), executado o fechamento da metodologia — tudo via **fast-forward puro, sem force-push**:
+
+1. `git push origin feature/modo-vadr` — `bb678c7..f24b959`
+2. `git push origin feature/modo-vadr:development` — `fc51123..f24b959`
+3. `git push origin feature/modo-vadr:main` — `af47022..f24b959`
+4. Limpeza: `fix/auditoria-tecnica` e `feature/correcao-fluidez-grafico-temporal` já tinham sido apagadas no GitHub (provavelmente automático ao fechar PR) — só restava podar as referências locais obsoletas (`git fetch --prune` + `git branch -d`).
+
+**Estado final:** `main`, `development` e `feature/modo-vadr` apontam todos para o mesmo commit (`f24b959`), sincronizados com seus remotos. A partir daqui, o fluxo esperado é: features novas em branches próprias a partir de `development`, merge de volta, e `main` atualizada em pontos de release — não mais um branch de feature acumulando meses de trabalho como trunk de fato.
+
 ---
 
 ## 7. Princípio Norteador
